@@ -16,7 +16,7 @@ const options = {
 			{
 				url:
 					ENVIRONMENT.APP.ENV === 'production'
-						? 'https://ride-inc.onrender.com/api/v1'
+						? 'https://joygiver.onrender.com/api/v1'
 						: `http://localhost:${ENVIRONMENT.APP.PORT || 3000}/api/v1`,
 				description: ENVIRONMENT.APP.ENV === 'production' ? 'Production server' : 'Development server',
 			},
