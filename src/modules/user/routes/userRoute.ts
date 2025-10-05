@@ -8,8 +8,8 @@ const router = express.Router();
  * @openapi
  * /sign-up:
  *   post:
- *     summary: Register a new user with email
- *     description: Creates a new user account with the provided email, first name, and last name. Validates that the email is unique and all required fields are provided. Generates access and refresh tokens upon successful registration, setting them as cookies.
+ *     summary: Register a new user with email or phone
+ *     description: Creates a new user account with the provided email, phone number, first name, last name, gender, and date of birth. Validates that either email or phone is provided, ensures the email or phone is unique, and requires gender. Sends a welcome email upon successful registration. The registration completion status is set based on whether all required fields are provided.
  *     tags:
  *       - User
  *     requestBody:
@@ -21,20 +21,35 @@ const router = express.Router();
  *             properties:
  *               email:
  *                 type: string
+ *                 nullable: true
  *                 example: "uchennadavid2404@gmail.com"
  *                 description: The user's email address
  *               firstName:
  *                 type: string
- *                 example: "David"
+ *                 nullable: true
+ *                 example: null
  *                 description: The user's first name
  *               lastName:
  *                 type: string
- *                 example: "David"
+ *                 nullable: true
+ *                 example: null
  *                 description: The user's last name
+ *               phone:
+ *                 type: string
+ *                 nullable: true
+ *                 example: ""
+ *                 description: The user's phone number
+ *               gender:
+ *                 type: string
+ *                 example: "male"
+ *                 description: The user's gender
+ *               dob:
+ *                 type: string
+ *                 nullable: true
+ *                 example: ""
+ *                 description: The user's date of birth
  *             required:
- *               - email
- *               - firstName
- *               - lastName
+ *               - gender
  *     responses:
  *       201:
  *         description: User created successfully
@@ -54,7 +69,7 @@ const router = express.Router();
  *                       id:
  *                         type: string
  *                         format: uuid
- *                         example: "b5f09262-9411-44e3-9939-d86b9309c9ec"
+ *                         example: "09127216-c1a9-468e-9a96-d712ab67edd9"
  *                         description: The unique identifier of the user
  *                       email:
  *                         type: string
@@ -64,13 +79,18 @@ const router = express.Router();
  *                       firstName:
  *                         type: string
  *                         nullable: true
- *                         example: "David"
+ *                         example: null
  *                         description: The user's first name
  *                       lastName:
  *                         type: string
  *                         nullable: true
- *                         example: "David"
+ *                         example: null
  *                         description: The user's last name
+ *                       phone:
+ *                         type: string
+ *                         nullable: true
+ *                         example: ""
+ *                         description: The user's phone number
  *                       photo:
  *                         type: string
  *                         nullable: true
@@ -82,7 +102,7 @@ const router = express.Router();
  *                         description: The user's role
  *                       isRegistrationComplete:
  *                         type: boolean
- *                         example: true
+ *                         example: false
  *                         description: Indicates if the user registration is complete
  *                       isSuspended:
  *                         type: boolean
@@ -95,23 +115,22 @@ const router = express.Router();
  *                       created_at:
  *                         type: string
  *                         format: date-time
- *                         example: "2025-09-28T19:50:56.404Z"
+ *                         example: "2025-10-05T04:48:50.177Z"
  *                         description: Timestamp when the user account was created
+ *                       gender:
+ *                         type: string
+ *                         example: "male"
+ *                         description: The user's gender
+ *                       dob:
+ *                         type: string
+ *                         nullable: true
+ *                         example: ""
+ *                         description: The user's date of birth
  *                 message:
  *                   type: string
  *                   example: "User created successfully"
- *         headers:
- *           Set-Cookie:
- *             schema:
- *               type: array
- *               items:
- *                 type: string
- *                 example:
- *                   - "accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; Path=/; HttpOnly"
- *                   - "refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; Path=/; HttpOnly"
- *               description: Sets the access and refresh tokens as cookies
  *       400:
- *         description: Bad Request - Missing required fields (email, firstName, or lastName)
+ *         description: Bad Request - Missing email or phone number, or missing gender
  *         content:
  *           application/json:
  *             schema:
@@ -122,9 +141,9 @@ const router = express.Router();
  *                   example: error
  *                 message:
  *                   type: string
- *                   example: "Email is required"
+ *                   example: "Either email or phone number is required"
  *       409:
- *         description: Conflict - User with the provided email already exists
+ *         description: Conflict - User with the provided email or phone number already exists
  *         content:
  *           application/json:
  *             schema:
@@ -155,8 +174,8 @@ router.post('/sign-up', userController.signUp);
  * @openapi
  * /sign-in:
  *   post:
- *     summary: Sign in a user with email
- *     description: Initiates the authentication process for a user by email. Validates the user's existence, checks for account suspension or deletion, and prompts the user to request an OTP to complete the sign-in process.
+ *     summary: Sign in a user with email or phone
+ *     description: Initiates the authentication process for a user by either email or phone number. Validates the user's existence, checks for account suspension or deletion, and prompts the user to request an OTP to complete the sign-in process.
  *     tags:
  *       - User
  *     requestBody:
@@ -168,10 +187,17 @@ router.post('/sign-up', userController.signUp);
  *             properties:
  *               email:
  *                 type: string
+ *                 nullable: true
  *                 example: "uchennadavid2404@gmail.com"
  *                 description: The user's email address
- *             required:
- *               - email
+ *               phone:
+ *                 type: string
+ *                 nullable: true
+ *                 example: ""
+ *                 description: The user's phone number
+ *             anyOf:
+ *               - required: [email]
+ *               - required: [phone]
  *     responses:
  *       200:
  *         description: Sign-in initiated successfully, OTP request required
@@ -191,7 +217,7 @@ router.post('/sign-up', userController.signUp);
  *                       id:
  *                         type: string
  *                         format: uuid
- *                         example: "b5f09262-9411-44e3-9939-d86b9309c9ec"
+ *                         example: "09127216-c1a9-468e-9a96-d712ab67edd9"
  *                         description: The unique identifier of the user
  *                       email:
  *                         type: string
@@ -201,13 +227,18 @@ router.post('/sign-up', userController.signUp);
  *                       firstName:
  *                         type: string
  *                         nullable: true
- *                         example: "David"
+ *                         example: null
  *                         description: The user's first name
  *                       lastName:
  *                         type: string
  *                         nullable: true
- *                         example: "David"
+ *                         example: null
  *                         description: The user's last name
+ *                       phone:
+ *                         type: string
+ *                         nullable: true
+ *                         example: ""
+ *                         description: The user's phone number
  *                       photo:
  *                         type: string
  *                         nullable: true
@@ -219,7 +250,7 @@ router.post('/sign-up', userController.signUp);
  *                         description: The user's role
  *                       isRegistrationComplete:
  *                         type: boolean
- *                         example: true
+ *                         example: false
  *                         description: Indicates if the user registration is complete
  *                       isSuspended:
  *                         type: boolean
@@ -232,8 +263,17 @@ router.post('/sign-up', userController.signUp);
  *                       created_at:
  *                         type: string
  *                         format: date-time
- *                         example: "2025-09-28T19:50:56.404Z"
+ *                         example: "2025-10-05T04:48:50.177Z"
  *                         description: Timestamp when the user account was created
+ *                       gender:
+ *                         type: string
+ *                         example: "male"
+ *                         description: The user's gender
+ *                       dob:
+ *                         type: string
+ *                         nullable: true
+ *                         example: ""
+ *                         description: The user's date of birth
  *                 message:
  *                   type: string
  *                   example: "Please request OTP to complete sign in."
@@ -269,8 +309,8 @@ router.post('/sign-in', userController.signIn);
  * @openapi
  * /send-otp:
  *   post:
- *     summary: Send OTP for user verification via email
- *     description: Sends a one-time password (OTP) to the user's email address. Validates the user's existence, email address, account status, and OTP request limits before sending the OTP.
+ *     summary: Send OTP for user verification via email or phone
+ *     description: Sends a one-time password (OTP) to the user's email or phone number. Validates the user's existence, checks for account suspension or deletion, and ensures OTP request limits are not exceeded. The OTP is sent via email or SMS based on the provided contact method.
  *     tags:
  *       - User
  *     requestBody:
@@ -282,10 +322,17 @@ router.post('/sign-in', userController.signIn);
  *             properties:
  *               email:
  *                 type: string
+ *                 nullable: true
  *                 example: "uchennadavid2404@gmail.com"
  *                 description: The user's email address
- *             required:
- *               - email
+ *               phone:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "08163534417"
+ *                 description: The user's phone number
+ *             anyOf:
+ *               - required: [email]
+ *               - required: [phone]
  *     responses:
  *       200:
  *         description: OTP sent successfully
@@ -306,7 +353,7 @@ router.post('/sign-in', userController.signIn);
  *                   example: "OTP sent. Please verify to continue."
  *                   description: Confirmation message indicating the OTP was sent
  *       400:
- *         description: Bad Request - Missing email or no email associated with user
+ *         description: Bad Request - Missing email or phone number, or no valid contact method
  *         content:
  *           application/json:
  *             schema:
@@ -317,7 +364,7 @@ router.post('/sign-in', userController.signIn);
  *                   example: error
  *                 message:
  *                   type: string
- *                   example: "Email is required"
+ *                   example: "Email or phone number is required"
  *       401:
  *         description: Unauthorized - Account is suspended
  *         content:
@@ -363,8 +410,8 @@ router.post('/send-otp', userController.sendOtp);
  * @openapi
  * /verify-otp:
  *   post:
- *     summary: Verify OTP for user authentication via email
- *     description: Verifies the one-time password (OTP) provided by the user to complete the authentication process using their email. Checks the user's existence, validates the OTP, and ensures it is not expired. Upon successful verification, clears the OTP, generates access and refresh tokens, sets them as cookies, and updates user details.
+ *     summary: Verify OTP for user authentication via email or phone
+ *     description: Verifies the one-time password (OTP) provided by the user to complete the authentication process using either their email or phone number. Validates the user's existence, checks the OTP, and ensures it is not expired. Upon successful verification, clears the OTP, updates user details, generates access and refresh tokens, sets them as cookies, and sends a login notification if applicable.
  *     tags:
  *       - User
  *     requestBody:
@@ -376,15 +423,21 @@ router.post('/send-otp', userController.sendOtp);
  *             properties:
  *               email:
  *                 type: string
+ *                 nullable: true
  *                 example: "uchennadavid2404@gmail.com"
  *                 description: The user's email address
+ *               phone:
+ *                 type: string
+ *                 nullable: true
+ *                 example: ""
+ *                 description: The user's phone number
  *               otp:
  *                 type: string
  *                 example: "123456"
  *                 description: The one-time password sent to the user
- *             required:
- *               - email
- *               - otp
+ *             anyOf:
+ *               - required: [email, otp]
+ *               - required: [phone, otp]
  *     responses:
  *       200:
  *         description: OTP verified successfully, tokens generated
@@ -404,7 +457,7 @@ router.post('/send-otp', userController.sendOtp);
  *                       id:
  *                         type: string
  *                         format: uuid
- *                         example: "3515368b-1c83-4fcf-b301-7db17bb7d0de"
+ *                         example: "09127216-c1a9-468e-9a96-d712ab67edd9"
  *                         description: The unique identifier of the user
  *                       email:
  *                         type: string
@@ -414,13 +467,18 @@ router.post('/send-otp', userController.sendOtp);
  *                       firstName:
  *                         type: string
  *                         nullable: true
- *                         example: "David"
+ *                         example: null
  *                         description: The user's first name
  *                       lastName:
  *                         type: string
  *                         nullable: true
- *                         example: "David"
+ *                         example: null
  *                         description: The user's last name
+ *                       phone:
+ *                         type: string
+ *                         nullable: true
+ *                         example: ""
+ *                         description: The user's phone number
  *                       photo:
  *                         type: string
  *                         nullable: true
@@ -430,6 +488,10 @@ router.post('/send-otp', userController.sendOtp);
  *                         type: string
  *                         example: "user"
  *                         description: The user's role
+ *                       isRegistrationComplete:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Indicates if the user registration is complete
  *                       isSuspended:
  *                         type: boolean
  *                         example: false
@@ -441,8 +503,17 @@ router.post('/send-otp', userController.sendOtp);
  *                       created_at:
  *                         type: string
  *                         format: date-time
- *                         example: "2025-09-23T03:25:40.189Z"
+ *                         example: "2025-10-05T04:48:50.177Z"
  *                         description: Timestamp when the user account was created
+ *                       gender:
+ *                         type: string
+ *                         example: "male"
+ *                         description: The user's gender
+ *                       dob:
+ *                         type: string
+ *                         nullable: true
+ *                         example: ""
+ *                         description: The user's date of birth
  *                 message:
  *                   type: string
  *                   example: "OTP verified successfully"
@@ -457,7 +528,7 @@ router.post('/send-otp', userController.sendOtp);
  *                   - "refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; Path=/; HttpOnly"
  *               description: Sets the access and refresh tokens as cookies
  *       400:
- *         description: Bad Request - Missing email or OTP
+ *         description: Bad Request - Missing email/phone or OTP
  *         content:
  *           application/json:
  *             schema:
@@ -468,7 +539,7 @@ router.post('/send-otp', userController.sendOtp);
  *                   example: error
  *                 message:
  *                   type: string
- *                   example: "Email and OTP are required"
+ *                   example: "Email or phone number and OTP are required"
  *       401:
  *         description: Unauthorized - Invalid or expired OTP
  *         content:
@@ -510,7 +581,6 @@ router.post('/send-otp', userController.sendOtp);
  *                   example: "Failed to retrieve updated user"
  */
 router.post('/verify-otp', userController.verifyOtp);
-
 
 router.use(protect);
 /**
@@ -725,10 +795,10 @@ router.post('/sign-out-all', userController.signOutFromAllDevices);
 router.get('/profile', userController.getProfile);
 /**
  * @openapi
- * /update-user:
+ * /update:
  *   post:
  *     summary: Update authenticated user details
- *     description: Updates the details of the currently authenticated user, including email, first name, and last name. Validates user authentication, checks for account suspension or deletion, and ensures the updated email does not already exist for another user. Updates the registration completion status if all required fields are provided.
+ *     description: Updates the details of the currently authenticated user, including email, first name, last name, date of birth, and phone number. Validates user authentication, checks for account suspension or deletion, and ensures the updated email or phone number does not already exist for another user. Updates the registration completion status if all required fields are provided.
  *     tags:
  *       - User
  *     requestBody:
@@ -746,13 +816,23 @@ router.get('/profile', userController.getProfile);
  *               firstName:
  *                 type: string
  *                 nullable: true
- *                 example: "David"
+ *                 example: "Dave"
  *                 description: The user's first name
  *               lastName:
  *                 type: string
  *                 nullable: true
  *                 example: "David"
  *                 description: The user's last name
+ *               dob:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "2000-01-01"
+ *                 description: The user's date of birth
+ *               phone:
+ *                 type: string
+ *                 nullable: true
+ *                 example: ""
+ *                 description: The user's phone number
  *     responses:
  *       200:
  *         description: Profile updated successfully
@@ -772,7 +852,7 @@ router.get('/profile', userController.getProfile);
  *                       id:
  *                         type: string
  *                         format: uuid
- *                         example: "085688b8-cfba-415c-affc-497d0f0d746d"
+ *                         example: "09127216-c1a9-468e-9a96-d712ab67edd9"
  *                         description: The unique identifier of the user
  *                       email:
  *                         type: string
@@ -782,7 +862,7 @@ router.get('/profile', userController.getProfile);
  *                       firstName:
  *                         type: string
  *                         nullable: true
- *                         example: "David"
+ *                         example: "Dave"
  *                         description: The user's first name
  *                       lastName:
  *                         type: string
@@ -800,7 +880,7 @@ router.get('/profile', userController.getProfile);
  *                         description: The user's role
  *                       isRegistrationComplete:
  *                         type: boolean
- *                         example: true
+ *                         example: false
  *                         description: Indicates if the user registration is complete
  *                       isSuspended:
  *                         type: boolean
@@ -813,8 +893,22 @@ router.get('/profile', userController.getProfile);
  *                       created_at:
  *                         type: string
  *                         format: date-time
- *                         example: "2025-09-28T20:21:47.341Z"
+ *                         example: "2025-10-05T04:48:50.177Z"
  *                         description: Timestamp when the user account was created
+ *                       gender:
+ *                         type: string
+ *                         example: "male"
+ *                         description: The user's gender
+ *                       dob:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "2000-01-01"
+ *                         description: The user's date of birth
+ *                       phone:
+ *                         type: string
+ *                         nullable: true
+ *                         example: ""
+ *                         description: The user's phone number
  *                 message:
  *                   type: string
  *                   example: "Profile updated successfully"
@@ -845,7 +939,7 @@ router.get('/profile', userController.getProfile);
  *                   type: string
  *                   example: "User not found"
  *       409:
- *         description: Conflict - User with the provided email already exists
+ *         description: Conflict - User with the provided email or phone number already exists
  *         content:
  *           application/json:
  *             schema:
@@ -871,6 +965,6 @@ router.get('/profile', userController.getProfile);
  *                   type: string
  *                   example: "Failed to update user details"
  */
-router.post('/update-user', userController.updateUserDetails);
+router.post('/update', userController.updateUserDetails);
 
 export { router as userRouter };

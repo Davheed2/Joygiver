@@ -13,7 +13,7 @@ export const userModuleSchema = z
 			.email()
 			.optional()
 			.transform((s) => s?.toLowerCase()),
-		gender: z.string().optional(),
+		gender: z.enum(['male', 'female', 'prefer not to say']).optional(),
 		phone: z
 			.string()
 			.optional()

@@ -25,32 +25,29 @@ export class UserController {
 	signUp = catchAsync(async (req: Request, res: Response) => {
 		const { email, firstName, lastName, phone, gender, dob } = req.body;
 
-		if (!email) {
-			throw new AppError('Email is required', 400);
+		if (!email && !phone) {
+			throw new AppError('Either email or phone number is required', 400);
 		}
-		if (!firstName) {
-			throw new AppError('First name is required', 400);
-		}
-		if (!lastName) {
-			throw new AppError('Last name is required', 400);
-		}
-		if (!phone) {
-			throw new AppError('Phone number is required', 400);
-		}
+
 		if (!gender) {
 			throw new AppError('Gender is required', 400);
 		}
-		if (!dob) {
-			throw new AppError('Date of birth is required', 400);
+
+		if (email) {
+			const existingEmailUser = await userRepository.findByEmail(email);
+			if (existingEmailUser) {
+				throw new AppError('User with this email already exists', 409);
+			}
 		}
 
-		const existingUser = await userRepository.findByEmailOrPhone(email, phone);
-		if (existingUser) {
-			if (existingUser.email === email) throw new AppError('User with this email already exists', 409);
-			if (existingUser.phone === phone) throw new AppError('User with this phone number already exists', 409);
+		if (phone) {
+			const existingPhoneUser = await userRepository.findByPhone(phone);
+			if (existingPhoneUser) {
+				throw new AppError('User with this phone number already exists', 409);
+			}
 		}
 
-		const isRegistrationComplete = !!(email && firstName && lastName);
+		const isRegistrationComplete = !!(email && firstName && lastName && phone && dob);
 
 		const [user] = await userRepository.create({
 			email,
@@ -68,24 +65,30 @@ export class UserController {
 
 		await sendWelcomeEmail(user.email, user.firstName);
 
-		const { accessToken, refreshToken } = await generateTokenPair(user.id);
-		console.log('Access Token:', accessToken);
-		console.log('Refresh Token:', refreshToken);
+		// const { accessToken, refreshToken } = await generateTokenPair(user.id);
+		// console.log('Access Token:', accessToken);
+		// console.log('Refresh Token:', refreshToken);
 
-		setCookie(req, res, 'accessToken', accessToken, parseTokenDuration(ENVIRONMENT.JWT_EXPIRES_IN.ACCESS));
-		setCookie(req, res, 'refreshToken', refreshToken, parseTokenDuration(ENVIRONMENT.JWT_EXPIRES_IN.REFRESH));
+		// setCookie(req, res, 'accessToken', accessToken, parseTokenDuration(ENVIRONMENT.JWT_EXPIRES_IN.ACCESS));
+		// setCookie(req, res, 'refreshToken', refreshToken, parseTokenDuration(ENVIRONMENT.JWT_EXPIRES_IN.REFRESH));
 
 		return AppResponse(res, 201, toJSON([user]), 'User created successfully');
 	});
 
 	signIn = catchAsync(async (req: Request, res: Response) => {
-		const { email } = req.body;
+		const { email, phone } = req.body;
 
-		if (!email) {
+		if (!email && !phone) {
 			throw new AppError('Incomplete login data', 401);
 		}
 
-		const user = await userRepository.findByEmail(email);
+		let user: IUser | null = null;
+		if (email) {
+			user = await userRepository.findByEmail(email);
+		} else if (phone) {
+			user = await userRepository.findByPhone(phone);
+		}
+
 		if (!user) {
 			throw new AppError('User not found', 404);
 		}
@@ -101,22 +104,27 @@ export class UserController {
 	});
 
 	sendOtp = catchAsync(async (req: Request, res: Response) => {
-		const { email } = req.body;
+		const { email, phone } = req.body;
 
-		if (!email) {
-			throw new AppError('Email is required', 400);
+		if (!email && !phone) {
+			throw new AppError('Email or phone number is required', 400);
 		}
 
-		const user = await userRepository.findByEmail(email);
+		let user: IUser | null = null;
+		if (email) {
+			user = await userRepository.findByEmail(email);
+		} else if (phone) {
+			user = await userRepository.findByPhone(phone);
+		}
+
 		if (!user) {
 			throw new AppError('User not found', 404);
 		}
-		if (!user.email) {
-			throw new AppError('No email address associated with this user', 400);
-		}
+
 		if (user.isSuspended) {
 			throw new AppError('Your account is currently suspended', 401);
 		}
+
 		if (user.isDeleted) {
 			throw new AppError('Account not found', 404);
 		}
@@ -125,12 +133,12 @@ export class UserController {
 		const lastOtpRetry = user.lastLogin
 			? currentRequestTime.diff(DateTime.fromISO(user.lastLogin.toISOString()), 'hours')
 			: null;
+
 		if (user.otpRetries >= 5 && lastOtpRetry && Math.round(lastOtpRetry.hours) < 1) {
 			throw new AppError('Too many OTP requests. Please try again in an hour.', 429);
 		}
 
 		const generatedOtp = generateOtp();
-		console.log('Generated OTP:', generatedOtp);
 		const otpExpires = currentRequestTime.plus({ minutes: 5 }).toJSDate();
 
 		await userRepository.update(user.id, {
@@ -139,26 +147,38 @@ export class UserController {
 			otpRetries: (user.otpRetries || 0) + 1,
 		});
 
-		await sendOtpEmail(user.email, user.firstName, generatedOtp);
-		console.log(`OTP sent to ${user.email}: ${generatedOtp}`);
+		if (email && user.email) {
+			await sendOtpEmail(user.email, user.firstName, generatedOtp);
+			console.log(`OTP sent to email ${user.email}: ${generatedOtp}`);
+		} else if (phone && user.phone) {
+			//await sendOtpSms(user.phone, generatedOtp);
+			console.log(`OTP sent to phone ${user.phone}: ${generatedOtp}`);
+		} else {
+			throw new AppError('User does not have a valid contact method', 400);
+		}
 
 		return AppResponse(res, 200, null, `OTP sent. Please verify to continue.`);
 	});
 
 	verifyOtp = catchAsync(async (req: Request, res: Response) => {
-		const { email, otp } = req.body;
+		const { email, phone, otp } = req.body;
 
-		if (!email || !otp) {
-			throw new AppError('Email and OTP are required', 400);
+		if ((!email && !phone) || !otp) {
+			throw new AppError('Email or phone number and OTP are required', 400);
 		}
 
-		const user = await userRepository.findByEmail(email);
+		let user: IUser | null = null;
+		if (email) {
+			user = await userRepository.findByEmail(email);
+		} else if (phone) {
+			user = await userRepository.findByPhone(phone);
+		}
+
 		if (!user) {
 			throw new AppError('User not found', 404);
 		}
 
 		const currentRequestTime = DateTime.now();
-
 		if (
 			!user.otp ||
 			!user.otpExpires ||
@@ -181,11 +201,13 @@ export class UserController {
 		}
 
 		const loginTime = DateTime.now().toFormat("cccc, LLLL d, yyyy 'at' t");
-		await sendLoginEmail(user.email, user.firstName, loginTime);
+		if (email && user.email && user.isRegistrationComplete) {
+			await sendLoginEmail(user.email, user.firstName, loginTime);
+		} else if (phone && user.phone) {
+			//await sendLoginSms(user.phone, loginTime);
+		}
 
 		const { accessToken, refreshToken } = await generateTokenPair(user.id);
-		console.log('Access Token:', accessToken);
-		console.log('Refresh Token:', refreshToken);
 
 		setCookie(req, res, 'accessToken', accessToken, parseTokenDuration(ENVIRONMENT.JWT_EXPIRES_IN.ACCESS));
 		setCookie(req, res, 'refreshToken', refreshToken, parseTokenDuration(ENVIRONMENT.JWT_EXPIRES_IN.REFRESH));
@@ -195,7 +217,7 @@ export class UserController {
 
 	updateUserDetails = catchAsync(async (req: Request, res: Response) => {
 		const { user } = req;
-		const { email, firstName, lastName } = req.body;
+		const { email, firstName, lastName, dob, phone } = req.body;
 
 		if (!user) {
 			throw new AppError('User not found', 404);
@@ -219,14 +241,28 @@ export class UserController {
 				throw new AppError('User with this email already exists', 409);
 			}
 		}
+		if (phone && phone !== existingUser.phone) {
+			const existingPhoneUser = await userRepository.findByPhone(phone);
+			if (existingPhoneUser && existingPhoneUser.id !== existingUser.id) {
+				throw new AppError('User with this phone number already exists', 409);
+			}
+		}
 
 		const updateData: Partial<IUser> = {};
 		if (email !== undefined) updateData.email = email;
 		if (firstName !== undefined) updateData.firstName = firstName;
 		if (lastName !== undefined) updateData.lastName = lastName;
+		if (dob !== undefined) updateData.dob = dob;
+		if (phone !== undefined) updateData.phone = phone;
 
 		const updatedUser = { ...existingUser, ...updateData };
-		const willBeComplete = !!(updatedUser.email && updatedUser.firstName && updatedUser.lastName);
+		const willBeComplete = !!(
+			updatedUser.email &&
+			updatedUser.firstName &&
+			updatedUser.lastName &&
+			updatedUser.phone &&
+			updatedUser.dob
+		);
 
 		if (willBeComplete) {
 			updateData.isRegistrationComplete = true;

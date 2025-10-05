@@ -1,8 +1,10 @@
 import { baseTemplate } from './baseTemplate';
 
 export const otpEmail = (data: { name: string; otp: string }) => {
+	const greeting = data.name ? `<h2>Hello, ${data.name}!</h2>` : '<h2>Hello!</h2>';
+
 	return baseTemplate(
-		`<h2>Hello, ${data.name}!</h2>
+		`${greeting}
         <p>
             We received a request to log in to your Ride account. To proceed, please use the One-Time Password (OTP) below:
         </p>
