@@ -139,7 +139,7 @@ export class UserController {
 		}
 
 		// const generatedOtp = generateOtp();
-		const generatedOtp = 222222;
+		const generatedOtp = '222222';
 		const otpExpires = currentRequestTime.plus({ minutes: 5 }).toJSDate();
 
 		await userRepository.update(user.id, {
