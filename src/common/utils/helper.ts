@@ -342,7 +342,7 @@ const formatDuration = (seconds: number): string => {
 };
 
 const generateOtp = () => {
-	return otpGenerator.generate(4, {
+	return otpGenerator.generate(6, {
 		digits: true,
 		upperCaseAlphabets: false,
 		specialChars: false,
