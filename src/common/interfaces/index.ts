@@ -6,3 +6,4 @@ export * from './hashData';
 export * from './aws';
 export * from './emailQueue';
 export * from './tokenFamily';
+export * from './wishlist';

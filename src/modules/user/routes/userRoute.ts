@@ -6,7 +6,7 @@ const router = express.Router();
 
 /**
  * @openapi
- * /sign-up:
+ * /user/sign-up:
  *   post:
  *     summary: Register a new user with email or phone
  *     description: Creates a new user account with the provided email, phone number, first name, last name, gender, and date of birth. Validates that either email or phone is provided, ensures the email or phone is unique, and requires gender. Sends a welcome email upon successful registration. The registration completion status is set based on whether all required fields are provided.
@@ -172,7 +172,7 @@ const router = express.Router();
 router.post('/sign-up', userController.signUp);
 /**
  * @openapi
- * /sign-in:
+ * /user/sign-in:
  *   post:
  *     summary: Sign in a user with email or phone
  *     description: Initiates the authentication process for a user by either email or phone number. Validates the user's existence, checks for account suspension or deletion, and prompts the user to request an OTP to complete the sign-in process.
@@ -307,7 +307,7 @@ router.post('/sign-up', userController.signUp);
 router.post('/sign-in', userController.signIn);
 /**
  * @openapi
- * /send-otp:
+ * /user/send-otp:
  *   post:
  *     summary: Send OTP for user verification via email or phone
  *     description: Sends a one-time password (OTP) to the user's email or phone number. Validates the user's existence, checks for account suspension or deletion, and ensures OTP request limits are not exceeded. The OTP is sent via email or SMS based on the provided contact method.
@@ -408,7 +408,7 @@ router.post('/sign-in', userController.signIn);
 router.post('/send-otp', userController.sendOtp);
 /**
  * @openapi
- * /verify-otp:
+ * /user/verify-otp:
  *   post:
  *     summary: Verify OTP for user authentication via email or phone
  *     description: Verifies the one-time password (OTP) provided by the user to complete the authentication process using either their email or phone number. Validates the user's existence, checks the OTP, and ensures it is not expired. Upon successful verification, clears the OTP, updates user details, generates access and refresh tokens, sets them as cookies, and sends a login notification if applicable.
@@ -585,7 +585,7 @@ router.post('/verify-otp', userController.verifyOtp);
 router.use(protect);
 /**
  * @openapi
- * /sign-out:
+ * /user/sign-out:
  *   post:
  *     summary: Sign out a user
  *     description: Logs out the currently authenticated user by invalidating their token family (if a refresh token is provided) and clearing access and refresh token cookies. Requires the user to be authenticated.
@@ -637,7 +637,7 @@ router.use(protect);
 router.post('/sign-out', userController.signOut);
 /**
  * @openapi
- * /sign-out-all:
+ * /user/sign-out-all:
  *   post:
  *     summary: Sign out user from all devices
  *     description: Logs out the currently authenticated user from all devices by invalidating all token families associated with the user and clearing access and refresh token cookies. Requires the user to be authenticated.
@@ -689,7 +689,7 @@ router.post('/sign-out', userController.signOut);
 router.post('/sign-out-all', userController.signOutFromAllDevices);
 /**
  * @openapi
- * /profile:
+ * /user/profile:
  *   get:
  *     summary: Retrieve user profile
  *     description: Retrieves the profile information of the currently authenticated user. The endpoint validates the user's authentication, checks if the user exists in the database, and returns their profile details.
@@ -795,7 +795,7 @@ router.post('/sign-out-all', userController.signOutFromAllDevices);
 router.get('/profile', userController.getProfile);
 /**
  * @openapi
- * /update:
+ * /user/update:
  *   post:
  *     summary: Update authenticated user details
  *     description: Updates the details of the currently authenticated user, including email, first name, last name, date of birth, and phone number. Validates user authentication, checks for account suspension or deletion, and ensures the updated email or phone number does not already exist for another user. Updates the registration completion status if all required fields are provided.

@@ -29,6 +29,7 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
 import { startAllQueuesAndWorkers, stopAllQueuesAndWorkers } from './queues';
 import { userRouter } from './modules/user/routes';
+import { wishlistRouter } from './modules/wishlist/routes';
 
 dotenv.config();
 /**
@@ -158,7 +159,7 @@ app.use('/api/v1/alive', (req: Request, res: Response) => {
 });
 
 app.use('/api/v1/user', userRouter);
-//app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/wishlist', wishlistRouter);
 
 // Swagger documentation
 app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
