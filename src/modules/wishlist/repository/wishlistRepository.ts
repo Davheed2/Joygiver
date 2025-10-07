@@ -15,6 +15,10 @@ class WishlistRepository {
 		return await knexDb.table('wishlists').where({ uniqueLink }).first();
 	};
 
+	findByUserId = async (userId: string): Promise<IWishlist[]> => {
+		return await knexDb.table('wishlists').where({ userId }).orderBy('created_at', 'desc');
+	};
+
 	update = async (id: string, payload: Partial<IWishlist>): Promise<IWishlist[]> => {
 		return await knexDb('wishlists')
 			.where({ id })

@@ -585,6 +585,35 @@ export class WishlistController {
 		);
 	});
 
+	getUserWishlist = catchAsync(async (req: Request, res: Response) => {
+		const { user } = req;
+
+		if (!user) {
+			throw new AppError('User not found', 404);
+		}
+
+		const [wishlists] = await wishlistRepository.findByUserId(user.id);
+		if (!wishlists) {
+			throw new AppError('No wishlists found for this user', 404);
+		}
+
+		if (!wishlists.isPublic && wishlists.status !== WishlistStatus.ACTIVE) {
+			throw new AppError('This wishlist is not available', 403);
+		}
+
+		const items = await wishlistItemRepository.findByWishlistId(wishlists.id);
+		if (!items) {
+			throw new AppError('No items found in this wishlist', 404);
+		}
+
+		return AppResponse(
+			res,
+			200,
+			[{ wishlist: toJSON(wishlists), items: toJSON(items) }],
+			'Wishlists fetched successfully'
+		);
+	});
+
 	seedData = catchAsync(async (req: Request, res: Response) => {
 		const { user } = req;
 
