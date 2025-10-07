@@ -23,7 +23,7 @@ class WishlistRepository {
 	};
 
 	incrementViewCount = async (id: string): Promise<IWishlist[]> => {
-		return await knexDb('wishlists').where({ id }).increment('view_count', 1).returning('*');
+		return await knexDb('wishlists').where({ id }).increment('viewsCount', 1).returning('*');
 	};
 
 	updateContributionStats = async (id: string, amount: number): Promise<IWishlist[]> => {

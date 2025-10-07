@@ -422,16 +422,14 @@ export class WishlistController {
 		expiresAt.setDate(expiresAt.getDate() + 7);
 
 		const result = await knexDb.transaction(async () => {
-			const [wishlist] = await wishlistRepository.create(
-				{
-					userId: user.id,
-					celebrationEvent,
-					celebrationDate: celebrationDateObj,
-					uniqueLink,
-					status: WishlistStatus.ACTIVE,
-					expiresAt,
-				}
-			);
+			const [wishlist] = await wishlistRepository.create({
+				userId: user.id,
+				celebrationEvent,
+				celebrationDate: celebrationDateObj,
+				uniqueLink,
+				status: WishlistStatus.ACTIVE,
+				expiresAt,
+			});
 
 			if (!wishlist) {
 				throw new AppError('Failed to create wishlist', 500);
@@ -518,12 +516,20 @@ export class WishlistController {
 			}
 		}
 
-		const wishlistItems = items.map((item: { curatedItemId: string }, index: number) => {
+		const wishlistItems: Partial<IWishlistItem>[] = [];
+		for (let index = 0; index < items.length; index++) {
+			const item = items[index];
 			const curated = fetchedItemsMap.get(item.curatedItemId);
 			if (!curated) {
 				throw new AppError(`Curated item with ID ${item.curatedItemId} not found`, 400);
 			}
-			return {
+			const existingItem = await wishlistItemRepository
+				.findByWishlistId(wishlist.id)
+				.then((items) => items.find((i) => i.curatedItemId === item.curatedItemId));
+			if (existingItem) {
+				throw new AppError(`${curated.name} already exists in the wishlist`, 400);
+			}
+			wishlistItems.push({
 				wishlistId: wishlist.id,
 				curatedItemId: curated.id,
 				name: curated.name,
@@ -531,15 +537,15 @@ export class WishlistController {
 				price: curated.price,
 				categoryId: curated.categoryId,
 				priority: index + 1,
-			};
-		});
+			});
+		}
 
-		const [addedItems] = await wishlistItemRepository.createMany(wishlistItems);
+		const addedItems = await wishlistItemRepository.createMany(wishlistItems);
 		if (!addedItems) {
 			throw new AppError('Failed to add items to wishlist', 500);
 		}
 
-		return AppResponse(res, 201, toJSON([addedItems]), 'Items added to wishlist successfully');
+		return AppResponse(res, 201, toJSON(addedItems), 'Items added to wishlist successfully');
 	});
 
 	getWishlistByLink = catchAsync(async (req: Request, res: Response) => {
@@ -571,7 +577,12 @@ export class WishlistController {
 			referrer: req.get('referer'),
 		});
 
-		return AppResponse(res, 200, { wishlist: toJSON(wishlist), items }, 'Wishlist fetched successfully');
+		return AppResponse(
+			res,
+			200,
+			[{ wishlist: toJSON(wishlist), items: toJSON(items) }],
+			'Wishlist fetched successfully'
+		);
 	});
 
 	seedData = catchAsync(async (req: Request, res: Response) => {
