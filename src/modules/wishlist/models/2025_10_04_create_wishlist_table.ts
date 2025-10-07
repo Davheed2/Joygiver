@@ -1,4 +1,4 @@
-import { GiftSelectionMode, WishlistStatus } from '../../../common/constants';
+import { WishlistStatus } from '../../../common/constants';
 import { Knex } from 'knex';
 
 export async function up(knex: Knex): Promise<void> {
@@ -6,7 +6,6 @@ export async function up(knex: Knex): Promise<void> {
 		table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
 		table.string('celebrationEvent', 100).notNullable();
 		table.date('celebrationDate').notNullable();
-		table.enum('giftSelectionMode', Object.values(GiftSelectionMode)).notNullable();
 		table.string('uniqueLink', 255).notNullable().unique();
 		table.enum('status', Object.values(WishlistStatus)).defaultTo(WishlistStatus.ACTIVE);
 		table.decimal('totalContributed', 12, 2).defaultTo(0);

@@ -1040,5 +1040,171 @@ router.post('/update-item', wishlistController.updateCuratedItem);
  *                   example: "Failed to delete curated item"
  */
 router.post('/delete-item', wishlistController.deleteCuratedItem);
+router.post('/seed-data', wishlistController.seedData);
+/**
+ * @openapi
+ * /wishlist/create:
+ *   post:
+ *     summary: Create a new wishlist
+ *     description: Creates a new wishlist for the authenticated user with the specified celebration event, date, and optional items. Ensures the celebration date is not in the past and validates that items, if provided, are a non-empty array with valid curated item IDs. Generates a unique link for the wishlist and sets an expiration date 7 days after the celebration date. Uses a transaction to ensure atomicity when creating the wishlist and associated items.
+ *     tags:
+ *       - Wishlist
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               celebrationEvent:
+ *                 type: string
+ *                 example: "Birthday"
+ *                 description: The event associated with the wishlist
+ *               celebrationDate:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2025-10-31T23:00:00.000Z"
+ *                 description: The date of the celebration event
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     curatedItemId:
+ *                       type: string
+ *                       format: uuid
+ *                       example: "aecccb23-4d66-40f9-9849-2600c85fe3b1"
+ *                       description: The ID of the curated item to add to the wishlist
+ *                 description: Optional list of curated items to include in the wishlist
+ *             required:
+ *               - celebrationEvent
+ *               - celebrationDate
+ *     responses:
+ *       201:
+ *         description: Wishlist created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                         description: The unique identifier of the wishlist
+ *                       celebrationEvent:
+ *                         type: string
+ *                         example: "Birthday"
+ *                         description: The event associated with the wishlist
+ *                       celebrationDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-31T23:00:00.000Z"
+ *                         description: The date of the celebration event
+ *                       uniqueLink:
+ *                         type: string
+ *                         example: "https://joygiver.com/birthday-oB1J-V"
+ *                         description: A unique URL for accessing the wishlist
+ *                       status:
+ *                         type: string
+ *                         example: "active"
+ *                         description: The status of the wishlist
+ *                       totalContributed:
+ *                         type: string
+ *                         example: "0.00"
+ *                         description: The total amount contributed to the wishlist
+ *                       contributorsCount:
+ *                         type: integer
+ *                         example: 0
+ *                         description: The number of contributors to the wishlist
+ *                       viewsCount:
+ *                         type: integer
+ *                         example: 0
+ *                         description: The number of views of the wishlist
+ *                       isPublic:
+ *                         type: boolean
+ *                         example: true
+ *                         description: Indicates if the wishlist is public
+ *                       expiresAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-11-08T00:00:00.000Z"
+ *                         description: The expiration date of the wishlist
+ *                       userId:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "09127216-c1a9-468e-9a96-d712ab67edd9"
+ *                         description: The ID of the user who created the wishlist
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-07T04:08:05.299Z"
+ *                         description: Timestamp when the wishlist was created
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist created successfully with items"
+ *                   description: Confirmation message, varies based on whether items were included
+ *       400:
+ *         description: Bad Request - Missing required fields, past celebration date, or invalid items
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Celebration event and date are required"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in to create a wishlist"
+ *       404:
+ *         description: Not Found - Curated item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Curated item with ID aecccb23-4d66-40f9-9849-2600c85fe3b1 not found"
+ *       500:
+ *         description: Internal Server Error - Failed to create wishlist
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to create wishlist"
+ */
+router.post('/create', wishlistController.createWishlist);
 
 export { router as wishlistRouter };
