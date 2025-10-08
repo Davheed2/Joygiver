@@ -555,7 +555,8 @@ export class WishlistController {
 			throw new AppError('Unique link is required', 400);
 		}
 
-		const wishlist = await wishlistRepository.findByUniqueLink(uniqueLink as string);
+		const appendLink = `https://joygiver.com/${uniqueLink}`;
+		const wishlist = await wishlistRepository.findByUniqueLink(appendLink);
 		if (!wishlist) {
 			throw new AppError('Wishlist not found', 404);
 		}

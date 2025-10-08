@@ -5,8 +5,199 @@ import express from 'express';
 
 const router = express.Router();
 
-router.use(protect);
+/**
+ * @openapi
+ * /wishlist:
+ *   get:
+ *     summary: Retrieve a wishlist by its unique link
+ *     description: Fetches a wishlist and its associated items using the provided unique link. The wishlist must be public and active. Increments the view count and logs the view with the visitor's IP address, user agent, and referrer.
+ *     tags:
+ *       - Wishlist
+ *     parameters:
+ *       - in: query
+ *         name: uniqueLink
+ *         schema:
+ *           type: string
+ *           example: "https://joygiver.com/birthday-WBNmhb"
+ *         required: true
+ *         description: The unique link of the wishlist to retrieve
+ *     responses:
+ *       200:
+ *         description: Wishlist fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       wishlist:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "a2f42667-ba47-42e2-a3bb-57403a9132be"
+ *                             description: The unique identifier of the wishlist
+ *                           celebrationEvent:
+ *                             type: string
+ *                             example: "Birthday"
+ *                             description: The event associated with the wishlist
+ *                           celebrationDate:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-31T23:00:00.000Z"
+ *                             description: The date of the celebration event
+ *                           uniqueLink:
+ *                             type: string
+ *                             example: "https://joygiver.com/birthday-WBNmhb"
+ *                             description: The unique URL for accessing the wishlist
+ *                           status:
+ *                             type: string
+ *                             example: "active"
+ *                             description: The status of the wishlist
+ *                           totalContributed:
+ *                             type: string
+ *                             example: "0.00"
+ *                             description: The total amount contributed to the wishlist
+ *                           contributorsCount:
+ *                             type: integer
+ *                             example: 0
+ *                             description: The number of contributors to the wishlist
+ *                           viewsCount:
+ *                             type: integer
+ *                             example: 1
+ *                             description: The number of views of the wishlist
+ *                           isPublic:
+ *                             type: boolean
+ *                             example: true
+ *                             description: Indicates if the wishlist is public
+ *                           expiresAt:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-11-08T00:00:00.000Z"
+ *                             description: The expiration date of the wishlist
+ *                           userId:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "09127216-c1a9-468e-9a96-d712ab67edd9"
+ *                             description: The ID of the user who created the wishlist
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-07T04:05:40.192Z"
+ *                             description: Timestamp when the wishlist was created
+ *                       items:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                               format: uuid
+ *                               example: "fe66ca27-9b5d-4d94-8008-3db8e1e810fe"
+ *                               description: The unique identifier of the wishlist item
+ *                             name:
+ *                               type: string
+ *                               example: "Casual Denim Jacket"
+ *                               description: The name of the wishlist item
+ *                             imageUrl:
+ *                               type: string
+ *                               nullable: true
+ *                               example: "https://i.guim.co.uk/img/media/18badfc0b64b09f917fd14bbe47d73fd92feeb27/189_335_5080_3048/master/5080.jpg?width=1200&height=1200&quality=85&auto=format&fit=crop&s=1562112c7a64da36ae0a5e75075a0d12"
+ *                               description: The URL of the wishlist item's image
+ *                             price:
+ *                               type: string
+ *                               example: "85.00"
+ *                               description: The price of the wishlist item
+ *                             quantity:
+ *                               type: integer
+ *                               example: 1
+ *                               description: The requested quantity of the wishlist item
+ *                             quantityFulfilled:
+ *                               type: integer
+ *                               example: 0
+ *                               description: The quantity of the wishlist item that has been fulfilled
+ *                             amountContributed:
+ *                               type: string
+ *                               example: "0.00"
+ *                               description: The total amount contributed towards the wishlist item
+ *                             priority:
+ *                               type: integer
+ *                               example: 1
+ *                               description: The priority order of the wishlist item
+ *                             wishlistId:
+ *                               type: string
+ *                               format: uuid
+ *                               example: "a2f42667-ba47-42e2-a3bb-57403a9132be"
+ *                               description: The ID of the wishlist the item belongs to
+ *                             curatedItemId:
+ *                               type: string
+ *                               format: uuid
+ *                               example: "21af9187-2093-4ed0-b7ec-af694d550fe2"
+ *                               description: The ID of the curated item
+ *                             categoryId:
+ *                               type: string
+ *                               format: uuid
+ *                               example: "17f1972c-231d-49f2-8988-5792a862d07c"
+ *                               description: The ID of the category to which the item belongs
+ *                             created_at:
+ *                               type: string
+ *                               format: date-time
+ *                               example: "2025-10-07T04:05:40.254Z"
+ *                               description: Timestamp when the wishlist item was created
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist fetched successfully"
+ *       400:
+ *         description: Bad Request - Missing unique link
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Unique link is required"
+ *       403:
+ *         description: Forbidden - Wishlist is not public or not active
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "This wishlist is not available"
+ *       404:
+ *         description: Not Found - Wishlist or items not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist not found"
+ */
+router.get('/', wishlistController.getWishlistByLink);
 
+router.use(protect);
 /**
  * @openapi
  * /wishlist/create-category:
@@ -1380,197 +1571,7 @@ router.post('/create', wishlistController.createWishlist);
  *                   example: "Failed to add items to wishlist"
  */
 router.post('/add-item', wishlistController.addItemsToWishlist);
-/**
- * @openapi
- * /wishlist:
- *   get:
- *     summary: Retrieve a wishlist by its unique link
- *     description: Fetches a wishlist and its associated items using the provided unique link. The wishlist must be public and active. Increments the view count and logs the view with the visitor's IP address, user agent, and referrer.
- *     tags:
- *       - Wishlist
- *     parameters:
- *       - in: query
- *         name: uniqueLink
- *         schema:
- *           type: string
- *           example: "https://joygiver.com/birthday-WBNmhb"
- *         required: true
- *         description: The unique link of the wishlist to retrieve
- *     responses:
- *       200:
- *         description: Wishlist fetched successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       wishlist:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: string
- *                             format: uuid
- *                             example: "a2f42667-ba47-42e2-a3bb-57403a9132be"
- *                             description: The unique identifier of the wishlist
- *                           celebrationEvent:
- *                             type: string
- *                             example: "Birthday"
- *                             description: The event associated with the wishlist
- *                           celebrationDate:
- *                             type: string
- *                             format: date-time
- *                             example: "2025-10-31T23:00:00.000Z"
- *                             description: The date of the celebration event
- *                           uniqueLink:
- *                             type: string
- *                             example: "https://joygiver.com/birthday-WBNmhb"
- *                             description: The unique URL for accessing the wishlist
- *                           status:
- *                             type: string
- *                             example: "active"
- *                             description: The status of the wishlist
- *                           totalContributed:
- *                             type: string
- *                             example: "0.00"
- *                             description: The total amount contributed to the wishlist
- *                           contributorsCount:
- *                             type: integer
- *                             example: 0
- *                             description: The number of contributors to the wishlist
- *                           viewsCount:
- *                             type: integer
- *                             example: 1
- *                             description: The number of views of the wishlist
- *                           isPublic:
- *                             type: boolean
- *                             example: true
- *                             description: Indicates if the wishlist is public
- *                           expiresAt:
- *                             type: string
- *                             format: date-time
- *                             example: "2025-11-08T00:00:00.000Z"
- *                             description: The expiration date of the wishlist
- *                           userId:
- *                             type: string
- *                             format: uuid
- *                             example: "09127216-c1a9-468e-9a96-d712ab67edd9"
- *                             description: The ID of the user who created the wishlist
- *                           created_at:
- *                             type: string
- *                             format: date-time
- *                             example: "2025-10-07T04:05:40.192Z"
- *                             description: Timestamp when the wishlist was created
- *                       items:
- *                         type: array
- *                         items:
- *                           type: object
- *                           properties:
- *                             id:
- *                               type: string
- *                               format: uuid
- *                               example: "fe66ca27-9b5d-4d94-8008-3db8e1e810fe"
- *                               description: The unique identifier of the wishlist item
- *                             name:
- *                               type: string
- *                               example: "Casual Denim Jacket"
- *                               description: The name of the wishlist item
- *                             imageUrl:
- *                               type: string
- *                               nullable: true
- *                               example: "https://i.guim.co.uk/img/media/18badfc0b64b09f917fd14bbe47d73fd92feeb27/189_335_5080_3048/master/5080.jpg?width=1200&height=1200&quality=85&auto=format&fit=crop&s=1562112c7a64da36ae0a5e75075a0d12"
- *                               description: The URL of the wishlist item's image
- *                             price:
- *                               type: string
- *                               example: "85.00"
- *                               description: The price of the wishlist item
- *                             quantity:
- *                               type: integer
- *                               example: 1
- *                               description: The requested quantity of the wishlist item
- *                             quantityFulfilled:
- *                               type: integer
- *                               example: 0
- *                               description: The quantity of the wishlist item that has been fulfilled
- *                             amountContributed:
- *                               type: string
- *                               example: "0.00"
- *                               description: The total amount contributed towards the wishlist item
- *                             priority:
- *                               type: integer
- *                               example: 1
- *                               description: The priority order of the wishlist item
- *                             wishlistId:
- *                               type: string
- *                               format: uuid
- *                               example: "a2f42667-ba47-42e2-a3bb-57403a9132be"
- *                               description: The ID of the wishlist the item belongs to
- *                             curatedItemId:
- *                               type: string
- *                               format: uuid
- *                               example: "21af9187-2093-4ed0-b7ec-af694d550fe2"
- *                               description: The ID of the curated item
- *                             categoryId:
- *                               type: string
- *                               format: uuid
- *                               example: "17f1972c-231d-49f2-8988-5792a862d07c"
- *                               description: The ID of the category to which the item belongs
- *                             created_at:
- *                               type: string
- *                               format: date-time
- *                               example: "2025-10-07T04:05:40.254Z"
- *                               description: Timestamp when the wishlist item was created
- *                 message:
- *                   type: string
- *                   example: "Wishlist fetched successfully"
- *       400:
- *         description: Bad Request - Missing unique link
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: error
- *                 message:
- *                   type: string
- *                   example: "Unique link is required"
- *       403:
- *         description: Forbidden - Wishlist is not public or not active
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: error
- *                 message:
- *                   type: string
- *                   example: "This wishlist is not available"
- *       404:
- *         description: Not Found - Wishlist or items not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: error
- *                 message:
- *                   type: string
- *                   example: "Wishlist not found"
- */
-router.get('/', wishlistController.getWishlistByLink);
+
 /**
  * @openapi
  * /wishlist/user:

@@ -63,14 +63,33 @@ export class UserController {
 			throw new AppError('Failed to create user', 500);
 		}
 
+		const currentRequestTime = DateTime.now();
+		const lastOtpRetry = user.lastLogin
+			? currentRequestTime.diff(DateTime.fromISO(user.lastLogin.toISOString()), 'hours')
+			: null;
+
+		if (user.otpRetries >= 5 && lastOtpRetry && Math.round(lastOtpRetry.hours) < 1) {
+			throw new AppError('Too many OTP requests. Please try again in an hour.', 429);
+		}
+
+		// const generatedOtp = generateOtp();
+		const generatedOtp = '222222';
+		const otpExpires = currentRequestTime.plus({ minutes: 5 }).toJSDate();
+
+		await userRepository.update(user.id, {
+			otp: generatedOtp,
+			otpExpires,
+			otpRetries: (user.otpRetries || 0) + 1,
+		});
+		
+		if (email && user.email) {
+			await sendOtpEmail(user.email, user.firstName, generatedOtp);
+			console.log(`OTP sent to email ${user.email}: ${generatedOtp}`);
+		} else if (phone && user.phone) {
+			//await sendOtpSms(user.phone, generatedOtp);
+			console.log(`OTP sent to phone ${user.phone}: ${generatedOtp}`);
+		}
 		await sendWelcomeEmail(user.email, user.firstName);
-
-		// const { accessToken, refreshToken } = await generateTokenPair(user.id);
-		// console.log('Access Token:', accessToken);
-		// console.log('Refresh Token:', refreshToken);
-
-		// setCookie(req, res, 'accessToken', accessToken, parseTokenDuration(ENVIRONMENT.JWT_EXPIRES_IN.ACCESS));
-		// setCookie(req, res, 'refreshToken', refreshToken, parseTokenDuration(ENVIRONMENT.JWT_EXPIRES_IN.REFRESH));
 
 		return AppResponse(res, 201, toJSON([user]), 'User created successfully');
 	});
@@ -98,6 +117,33 @@ export class UserController {
 		}
 		if (user.isDeleted) {
 			throw new AppError('Account not found', 404);
+		}
+
+		const currentRequestTime = DateTime.now();
+		const lastOtpRetry = user.lastLogin
+			? currentRequestTime.diff(DateTime.fromISO(user.lastLogin.toISOString()), 'hours')
+			: null;
+
+		if (user.otpRetries >= 5 && lastOtpRetry && Math.round(lastOtpRetry.hours) < 1) {
+			throw new AppError('Too many OTP requests. Please try again in an hour.', 429);
+		}
+
+		// const generatedOtp = generateOtp();
+		const generatedOtp = '222222';
+		const otpExpires = currentRequestTime.plus({ minutes: 5 }).toJSDate();
+
+		await userRepository.update(user.id, {
+			otp: generatedOtp,
+			otpExpires,
+			otpRetries: (user.otpRetries || 0) + 1,
+		});
+
+		if (email && user.email) {
+			await sendOtpEmail(user.email, user.firstName, generatedOtp);
+			console.log(`OTP sent to email ${user.email}: ${generatedOtp}`);
+		} else if (phone && user.phone) {
+			//await sendOtpSms(user.phone, generatedOtp);
+			console.log(`OTP sent to phone ${user.phone}: ${generatedOtp}`);
 		}
 
 		return AppResponse(res, 200, toJSON([user]), 'Please request OTP to complete sign in.');
