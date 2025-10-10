@@ -40,3 +40,30 @@ export enum ContributionStatus {
 	FAILED = 'failed',
 	REFUNDED = 'refunded',
 }
+
+export enum WithdrawalStatus {
+	PENDING = 'pending',
+	PROCESSING = 'processing',
+	COMPLETED = 'completed',
+	FAILED = 'failed',
+	CANCELLED = 'cancelled',
+}
+
+export enum TransactionType {
+	CONTRIBUTION = 'contribution',
+	WITHDRAWAL = 'withdrawal',
+	REFUND = 'refund',
+	FEE = 'fee',
+}
+
+export const WITHDRAWAL_LIMITS = {
+	MIN: 1000,
+	MAX_STANDARD: 50000,
+	MAX_VERIFIED: 500000,
+};
+
+export const WITHDRAWAL_FEES = {
+	BASE: 10,
+	PERCENTAGE: 0.005,
+	CAP: 50,
+};

@@ -45,4 +45,8 @@ export interface IEnvironment {
 		CLIENT_SECRET: string;
 		REDIRECT_URI: string;
 	};
+	PAYSTACK: {
+		SECRET_KEY: string;
+		PUBLIC_KEY: string;
+	};
 }

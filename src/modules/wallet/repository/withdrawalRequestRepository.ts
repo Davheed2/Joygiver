@@ -1,0 +1,271 @@
+import { knexDb } from '@/common/config';
+import { IPayoutMethod, IWithdrawalRequest } from '@/common/interfaces';
+import { AppError } from '@/common/utils';
+import { DateTime } from 'luxon';
+import { nanoid } from 'nanoid';
+import { payoutMethodRepository } from './payoutMethodRepository';
+import { WITHDRAWAL_LIMITS } from '@/common/constants';
+import { walletRepository } from './walletRepository';
+import { paystackService } from '../services';
+
+class WithdrawalRequestRepository {
+	create = async (payload: Partial<IWithdrawalRequest>) => {
+		return await knexDb.table('withdrawal_requests').insert(payload).returning('*');
+	};
+
+	findById = async (id: string): Promise<IWithdrawalRequest | null> => {
+		return await knexDb.table('withdrawal_requests').where({ id }).first();
+	};
+
+	findByReference = async (reference: string): Promise<IWithdrawalRequest | null> => {
+		return await knexDb.table('withdrawal_requests').where({ paymentReference: reference }).first();
+	};
+
+	findByUserId = async (userId: string, page = 1, limit = 20): Promise<IWithdrawalRequest[]> => {
+		const offset = (page - 1) * limit;
+		return await knexDb
+			.table('withdrawal_requests')
+			.where({ userId })
+			.orderBy('created_at', 'desc')
+			.limit(limit)
+			.offset(offset);
+	};
+
+	findPending = async (): Promise<IWithdrawalRequest[]> => {
+		return await knexDb.table('withdrawal_requests').where({ status: 'pending' }).orderBy('created_at', 'asc');
+	};
+
+	findByStatus = async (status: string): Promise<IWithdrawalRequest[]> => {
+		return await knexDb.table('withdrawal_requests').where({ status }).orderBy('created_at', 'asc');
+	};
+
+	update = async (id: string, payload: Partial<IWithdrawalRequest>): Promise<IWithdrawalRequest[]> => {
+		return await knexDb('withdrawal_requests')
+			.where({ id })
+			.update({ ...payload, updated_at: DateTime.now().toJSDate() })
+			.returning('*');
+	};
+
+	countByUserId = async (userId: string): Promise<number> => {
+		const result = await knexDb('withdrawal_requests')
+			.where({ userId })
+			.count<{ count: string }[]>('* as count')
+			.first();
+
+		return Number(result?.count ?? 0);
+	};
+
+	createWithdrawalRequest = async (userId: string, amount: number, payoutMethodId?: string) => {
+		const wallet = await walletRepository.findByUserId(userId);
+		if (!wallet) {
+			throw new AppError('Wallet not found', 404);
+		}
+
+		// Validation
+		if (amount < WITHDRAWAL_LIMITS.MIN) {
+			throw new AppError(`Minimum withdrawal amount is ₦${WITHDRAWAL_LIMITS.MIN.toLocaleString()}`, 400);
+		}
+
+		if (amount > wallet.availableBalance) {
+			throw new AppError('Insufficient balance', 400);
+		}
+
+		// Get payout method
+		let payoutMethod: IPayoutMethod | null;
+		if (payoutMethodId) {
+			payoutMethod = await payoutMethodRepository.findById(payoutMethodId);
+			if (!payoutMethod || payoutMethod.userId !== userId) {
+				throw new AppError('Invalid payout method', 400);
+			}
+		} else {
+			payoutMethod = await payoutMethodRepository.findPrimaryByUserId(userId);
+			if (!payoutMethod) {
+				throw new AppError('No payout method found. Please add a payout method first', 400);
+			}
+		}
+
+		if (!payoutMethod.isVerified) {
+			throw new AppError('Payout method is not verified', 400);
+		}
+
+		// Calculate fees
+		const fee = paystackService.calculateWithdrawalFee(amount);
+		const netAmount = amount - fee;
+
+		// Generate reference
+		const reference = `WTH-${nanoid(16)}`;
+
+		// Create withdrawal request in transaction
+		let withdrawalRequest: IWithdrawalRequest;
+		await knexDb.transaction(async (trx) => {
+			// Lock wallet balance
+			await trx('wallets')
+				.where({ id: wallet.id })
+				.decrement('availableBalance', amount)
+				.increment('pendingBalance', amount)
+				.update({ updated_at: new Date() });
+
+			// Create withdrawal request
+			const [request] = await trx('withdrawal_requests')
+				.insert({
+					userId,
+					walletId: wallet.id,
+					payoutMethodId: payoutMethod.id,
+					amount,
+					fee,
+					netAmount,
+					status: 'pending',
+					paymentReference: reference,
+				})
+				.returning('*');
+
+			withdrawalRequest = request;
+
+			// Create transaction record
+			await trx('wallet_transactions').insert({
+				userId,
+				walletId: wallet.id,
+				type: 'withdrawal',
+				amount: -amount,
+				balanceBefore: wallet.availableBalance,
+				balanceAfter: wallet.availableBalance - amount,
+				reference,
+				description: 'Withdrawal request',
+				metadata: { withdrawalRequestId: request.id },
+			});
+
+			// Create fee transaction
+			await trx('wallet_transactions').insert({
+				userId,
+				walletId: wallet.id,
+				type: 'fee',
+				amount: -fee,
+				balanceBefore: wallet.availableBalance - amount,
+				balanceAfter: wallet.availableBalance - amount,
+				reference: `${reference}-FEE`,
+				description: 'Withdrawal fee',
+				metadata: { withdrawalRequestId: request.id },
+			});
+		});
+
+		return withdrawalRequest!;
+	};
+
+	processWithdrawal = async (withdrawalId: string) => {
+		const withdrawal = await this.findById(withdrawalId);
+		if (!withdrawal) {
+			throw new AppError('Withdrawal request not found', 404);
+		}
+
+		if (withdrawal.status !== 'pending') {
+			throw new AppError('Withdrawal request is not pending', 400);
+		}
+
+		const payoutMethod = await payoutMethodRepository.findById(withdrawal.payoutMethodId);
+		if (!payoutMethod) {
+			throw new AppError('Payout method not found', 404);
+		}
+
+		try {
+			// Update status to processing
+			await withdrawalRequestRepository.update(withdrawalId, { status: 'processing' });
+
+			// Initiate transfer on Paystack
+			const transfer = await paystackService.initiateTransfer(
+				payoutMethod.recipientCode!,
+				withdrawal.netAmount,
+				withdrawal.paymentReference
+			);
+
+			// Update with transfer code
+			await withdrawalRequestRepository.update(withdrawalId, {
+				transferCode: transfer.transfer_code,
+			});
+		} catch (error: unknown) {
+			// Revert balance if transfer fails
+			await this.failWithdrawal(withdrawalId, (error as Error).message);
+			throw error;
+		}
+	};
+
+	completeWithdrawal = async (withdrawalId: string) => {
+		const withdrawal = await withdrawalRequestRepository.findById(withdrawalId);
+		if (!withdrawal) {
+			throw new AppError('Withdrawal request not found', 404);
+		}
+
+		if (withdrawal.status !== 'processing') {
+			throw new AppError('Withdrawal is not in processing state', 400);
+		}
+
+		await knexDb.transaction(async (trx) => {
+			// Update withdrawal status
+			await trx('withdrawal_requests').where({ id: withdrawalId }).update({
+				status: 'completed',
+				processedAt: new Date(),
+				updated_at: new Date(),
+			});
+
+			// Remove from pending balance and add to total withdrawn
+			await trx('wallets')
+				.where({ id: withdrawal.walletId })
+				.decrement('pendingBalance', withdrawal.amount)
+				.increment('totalWithdrawn', withdrawal.amount)
+				.update({ updated_at: new Date() });
+		});
+	};
+
+	failWithdrawal = async (withdrawalId: string, reason: string) => {
+		const withdrawal = await withdrawalRequestRepository.findById(withdrawalId);
+		if (!withdrawal) {
+			throw new AppError('Withdrawal request not found', 404);
+		}
+
+		await knexDb.transaction(async (trx) => {
+			// Update withdrawal status
+			await trx('withdrawal_requests').where({ id: withdrawalId }).update({
+				status: 'failed',
+				failureReason: reason,
+				processedAt: new Date(),
+				updated_at: new Date(),
+			});
+
+			// Revert balance - move from pending back to available
+			await trx('wallets')
+				.where({ id: withdrawal.walletId })
+				.decrement('pendingBalance', withdrawal.amount)
+				.increment('availableBalance', withdrawal.amount)
+				.update({ updated_at: new Date() });
+
+			// Create refund transaction
+			await trx('wallet_transactions').insert({
+				userId: withdrawal.userId,
+				walletId: withdrawal.walletId,
+				type: 'refund',
+				amount: withdrawal.amount,
+				balanceBefore: 0, // Will need to query current balance
+				balanceAfter: 0,
+				reference: `${withdrawal.paymentReference}-REFUND`,
+				description: `Withdrawal failed: ${reason}`,
+				metadata: { withdrawalRequestId: withdrawal.id },
+			});
+		});
+	};
+
+	getWithdrawalHistory = async (userId: string, page = 1, limit = 20) => {
+		const withdrawals = await withdrawalRequestRepository.findByUserId(userId, page, limit);
+		const total = await withdrawalRequestRepository.countByUserId(userId);
+
+		return {
+			data: withdrawals,
+			pagination: {
+				page,
+				limit,
+				total,
+				totalPages: Math.ceil(total / limit),
+			},
+		};
+	};
+}
+
+export const withdrawalRequestRepository = new WithdrawalRequestRepository();

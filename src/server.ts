@@ -30,6 +30,7 @@ import { swaggerSpec } from './swagger';
 import { startAllQueuesAndWorkers, stopAllQueuesAndWorkers } from './queues';
 import { userRouter } from './modules/user/routes';
 import { wishlistRouter } from './modules/wishlist/routes';
+import { walletRouter } from './modules/wallet/routes';
 
 dotenv.config();
 /**
@@ -160,6 +161,7 @@ app.use('/api/v1/alive', (req: Request, res: Response) => {
 
 app.use('/api/v1/user', userRouter);
 app.use('/api/v1/wishlist', wishlistRouter);
+app.use('/api/v1/wallet', walletRouter);
 
 // Swagger documentation
 app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

@@ -456,6 +456,17 @@ const getRefreshTokenFromRequest = (req: Request): string | null => {
 	return req.cookies?.refreshToken || req.headers['x-refresh-token'] || null;
 };
 
+const calculateFee = (amount: number) => {
+	const BASE_FEE = 10; // ₦10
+	const PERCENTAGE = 0.005; // 0.5%
+	const CAP = 50; // Maximum ₦50
+
+	const percentageFee = amount * PERCENTAGE;
+	const totalFee = Math.min(BASE_FEE + percentageFee, CAP);
+
+	return Math.round(totalFee * 100) / 100;
+};
+
 const sendOtpEmail = async (email: string, name: string, otp: string): Promise<void> => {
 	const emailData: OtpEmailData = {
 		to: email,
@@ -536,4 +547,5 @@ export {
 	invalidateUserTokenFamilies,
 	extractTokenFamily,
 	getRefreshTokenFromRequest,
+	calculateFee,
 };

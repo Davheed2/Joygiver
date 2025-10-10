@@ -46,5 +46,9 @@ export const ENVIRONMENT: IEnvironment = {
 		CLIENT_ID: process.env.GOOGLE_CLIENT_ID!,
 		CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET!,
 		REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI!,
-	}
+	},
+	PAYSTACK: {
+		SECRET_KEY: process.env.PAYSTACK_SECRET_KEY!,
+		PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY!,
+	},
 };
