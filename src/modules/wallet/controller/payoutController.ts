@@ -7,7 +7,7 @@ import { paystackService } from '../services';
 export class PayoutController {
 	getBanks = catchAsync(async (req: Request, res: Response) => {
 		const { user } = req;
-        const {search} = req.query;
+		const { search } = req.query;
 
 		if (!user) {
 			throw new AppError('Please log in to view banks', 401);
@@ -58,6 +58,11 @@ export class PayoutController {
 			bankCode,
 			isPrimary || false
 		);
+
+		const payoutMethods = await payoutMethodRepository.getPayoutMethods(user.id);
+		if (payoutMethods.length === 1) {
+			await payoutMethodRepository.setPrimaryPayoutMethod(user.id, payoutMethod.id);
+		}
 
 		return AppResponse(res, 201, toJSON([payoutMethod]), 'Payout method added successfully');
 	});

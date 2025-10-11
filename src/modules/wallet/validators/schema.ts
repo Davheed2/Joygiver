@@ -37,6 +37,7 @@ export const walletModuleSchema = z
 		paymentReference: z.string().optional(),
 		transferCode: z.string().optional(), // Paystack transfer code
 		failureReason: z.string().max(500).optional(),
+		reason: z.string().max(500).optional(),
 		processedAt: z.string().optional(),
 
 		// ==================== TRANSACTION FIELDS ====================

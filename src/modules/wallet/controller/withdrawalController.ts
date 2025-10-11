@@ -27,7 +27,7 @@ export class WithdrawalController {
 		const withdrawRequest = await withdrawalRequestRepository.processWithdrawal(withdrawal.id);
 		console.log('Withdrawal request processed:', withdrawRequest);
 
-		return AppResponse(res, 201, toJSON(withdrawal), 'Withdrawal request created successfully');
+		return AppResponse(res, 201, toJSON([withdrawal]), 'Withdrawal request created successfully');
 	});
 
 	getWithdrawalHistory = catchAsync(async (req: Request, res: Response) => {
@@ -43,7 +43,7 @@ export class WithdrawalController {
 
 		const history = await withdrawalRequestRepository.getWithdrawalHistory(user.id, pageNum, limitNum);
 
-		return AppResponse(res, 200, toJSON(history), 'Withdrawal history retrieved successfully');
+		return AppResponse(res, 200, toJSON([history]), 'Withdrawal history retrieved successfully');
 	});
 
 	getWithdrawalDetails = catchAsync(async (req: Request, res: Response) => {
@@ -60,18 +60,18 @@ export class WithdrawalController {
 
 		// Get all withdrawals and find the specific one (ensures user owns it)
 		const withdrawals = await withdrawalRequestRepository.getWithdrawalHistory(user.id, 1, 1000);
-		const withdrawal = withdrawals.data.find((w: IWithdrawalRequest) => w.id === withdrawalId);
+		const withdrawal = withdrawals.withdrawals.find((w: IWithdrawalRequest) => w.id === withdrawalId);
 
 		if (!withdrawal) {
 			throw new AppError('Withdrawal not found', 404);
 		}
 
-		return AppResponse(res, 200, toJSON(withdrawal), 'Withdrawal details retrieved successfully');
+		return AppResponse(res, 200, toJSON([withdrawal]), 'Withdrawal details retrieved successfully');
 	});
 
 	cancelWithdrawal = catchAsync(async (req: Request, res: Response) => {
 		const { user } = req;
-		const { withdrawalId } = req.query;
+		const { withdrawalId } = req.body;
 
 		if (!user) {
 			throw new AppError('Please log in', 401);
@@ -81,17 +81,15 @@ export class WithdrawalController {
 			throw new AppError('Withdrawal ID is required', 400);
 		}
 
-		// Only pending withdrawals can be cancelled
 		await withdrawalRequestRepository.failWithdrawal(withdrawalId as string, 'Cancelled by user');
 
 		return AppResponse(res, 200, null, 'Withdrawal cancelled successfully');
 	});
 
 	// ==================== ADMIN ENDPOINTS ====================
-
 	processWithdrawal = catchAsync(async (req: Request, res: Response) => {
 		const { user } = req;
-		const { withdrawalId } = req.query;
+		const { withdrawalId } = req.body;
 
 		if (!user || user.role !== 'admin') {
 			throw new AppError('Unauthorized. Admin access required', 403);
@@ -101,14 +99,14 @@ export class WithdrawalController {
 			throw new AppError('Withdrawal ID is required', 400);
 		}
 
-		await withdrawalRequestRepository.processWithdrawal(withdrawalId as string);
+		await withdrawalRequestRepository.processWithdrawal(withdrawalId);
 
 		return AppResponse(res, 200, null, 'Withdrawal processed successfully');
 	});
 
 	completeWithdrawal = catchAsync(async (req: Request, res: Response) => {
 		const { user } = req;
-		const { withdrawalId } = req.query;
+		const { withdrawalId } = req.body;
 
 		if (!user || user.role !== 'admin') {
 			throw new AppError('Unauthorized. Admin access required', 403);
@@ -118,15 +116,14 @@ export class WithdrawalController {
 			throw new AppError('Withdrawal ID is required', 400);
 		}
 
-		await withdrawalRequestRepository.completeWithdrawal(withdrawalId as string);
+		await withdrawalRequestRepository.completeWithdrawal(withdrawalId);
 
 		return AppResponse(res, 200, null, 'Withdrawal completed successfully');
 	});
 
 	failWithdrawal = catchAsync(async (req: Request, res: Response) => {
 		const { user } = req;
-		const { withdrawalId } = req.query;
-		const { reason } = req.body;
+		const { reason, withdrawalId } = req.body;
 
 		if (!user || user.role !== 'admin') {
 			throw new AppError('Unauthorized. Admin access required', 403);
@@ -140,7 +137,7 @@ export class WithdrawalController {
 			throw new AppError('Failure reason is required', 400);
 		}
 
-		await withdrawalRequestRepository.failWithdrawal(withdrawalId as string, reason);
+		await withdrawalRequestRepository.failWithdrawal(withdrawalId, reason);
 
 		return AppResponse(res, 200, null, 'Withdrawal marked as failed and balance refunded');
 	});

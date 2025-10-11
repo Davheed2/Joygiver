@@ -221,8 +221,16 @@ class WithdrawalRequestRepository {
 			throw new AppError('Withdrawal request not found', 404);
 		}
 
+		const currentBalance = await walletRepository.findByUserId(withdrawal.userId);
+		if (!currentBalance) {
+			throw new AppError('Balance fetch failed', 404);
+		}
+		const balanceAfter = currentBalance.availableBalance + withdrawal.amount;
+
 		await knexDb.transaction(async (trx) => {
-			// Update withdrawal status
+			if (withdrawal.status !== 'pending') {
+				throw new AppError('Only pending withdrawals can be failed', 400);
+			}
 			await trx('withdrawal_requests').where({ id: withdrawalId }).update({
 				status: 'failed',
 				failureReason: reason,
@@ -243,8 +251,8 @@ class WithdrawalRequestRepository {
 				walletId: withdrawal.walletId,
 				type: 'refund',
 				amount: withdrawal.amount,
-				balanceBefore: 0, // Will need to query current balance
-				balanceAfter: 0,
+				balanceBefore: currentBalance.availableBalance,
+				balanceAfter: balanceAfter,
 				reference: `${withdrawal.paymentReference}-REFUND`,
 				description: `Withdrawal failed: ${reason}`,
 				metadata: { withdrawalRequestId: withdrawal.id },
@@ -257,7 +265,7 @@ class WithdrawalRequestRepository {
 		const total = await withdrawalRequestRepository.countByUserId(userId);
 
 		return {
-			data: withdrawals,
+			withdrawals,
 			pagination: {
 				page,
 				limit,
