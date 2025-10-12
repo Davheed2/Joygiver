@@ -1,5 +1,11 @@
 import { multerUpload } from '@/common/config';
-import { wishlistController } from '../controller';
+import {
+	categoryController,
+	contributionController,
+	curatedItemController,
+	wishlistController,
+	wishlistItemController,
+} from '../controller';
 import { protect } from '@/middlewares/protect';
 import express from 'express';
 
@@ -197,6 +203,639 @@ const router = express.Router();
  */
 router.get('/', wishlistController.getWishlistByLink);
 
+/**
+ * @openapi
+ * /wishlist/contribute-item:
+ *   post:
+ *     summary: Initiate a contribution to a wishlist item
+ *     description: Initiates a contribution to a specified wishlist item by providing contributor details, amount, and an optional message. The contribution is marked as pending until payment is completed via Paystack. Returns a payment URL to complete the transaction. Required fields include wishlist item ID, contributor name, email, and amount.
+ *     tags:
+ *       - Contributions
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               wishlistItemId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *                 description: The unique identifier of the wishlist item
+ *               contributorName:
+ *                 type: string
+ *                 example: "David Daviiiii"
+ *                 description: The name of the contributor
+ *               contributorEmail:
+ *                 type: string
+ *                 format: email
+ *                 example: "daveuchenna2404@gmail.com"
+ *                 description: The email address of the contributor
+ *               contributorPhone:
+ *                 type: string
+ *                 example: "09154064012"
+ *                 description: The phone number of the contributor (optional)
+ *               amount:
+ *                 type: string
+ *                 example: "200.00"
+ *                 description: The contribution amount
+ *               message:
+ *                 type: string
+ *                 example: "Hello! Manage this small something"
+ *                 description: An optional message from the contributor
+ *               isAnonymous:
+ *                 type: boolean
+ *                 example: false
+ *                 description: Indicates if the contribution is anonymous (defaults to false)
+ *             required:
+ *               - wishlistItemId
+ *               - contributorName
+ *               - contributorEmail
+ *               - amount
+ *     responses:
+ *       200:
+ *         description: Contribution initialized successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       contribution:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "21c8b1c9-c4b1-438c-83c5-6f03f4d02f6b"
+ *                             description: The unique identifier of the contribution
+ *                           wishlistId:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                             description: The ID of the wishlist the item belongs to
+ *                           wishlistItemId:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *                             description: The ID of the wishlist item
+ *                           userId:
+ *                             type: string
+ *                             format: uuid
+ *                             nullable: true
+ *                             example: null
+ *                             description: The ID of the user making the contribution (if authenticated)
+ *                           contributorName:
+ *                             type: string
+ *                             example: "David Daviiiii"
+ *                             description: The name of the contributor
+ *                           contributorEmail:
+ *                             type: string
+ *                             format: email
+ *                             example: "daveuchenna2404@gmail.com"
+ *                             description: The email address of the contributor
+ *                           contributorPhone:
+ *                             type: string
+ *                             example: "09154064012"
+ *                             description: The phone number of the contributor
+ *                           message:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "Hello! Manage this small something"
+ *                             description: Optional message provided by the contributor
+ *                           isAnonymous:
+ *                             type: boolean
+ *                             example: false
+ *                             description: Indicates if the contribution is anonymous
+ *                           amount:
+ *                             type: string
+ *                             example: "200.00"
+ *                             description: The contribution amount
+ *                           status:
+ *                             type: string
+ *                             example: "pending"
+ *                             description: The status of the contribution (e.g., pending, completed)
+ *                           paymentReference:
+ *                             type: string
+ *                             example: "CONT-jTJG2VO-xJvEBYCD"
+ *                             description: The unique reference for the contribution payment
+ *                           paymentMethod:
+ *                             type: string
+ *                             example: "paystack"
+ *                             description: The payment method used for the contribution
+ *                           paystackReference:
+ *                             type: string
+ *                             nullable: true
+ *                             example: null
+ *                             description: The Paystack reference for the payment (null until completed)
+ *                           ownerReply:
+ *                             type: string
+ *                             nullable: true
+ *                             example: null
+ *                             description: The reply from the wishlist owner (if any)
+ *                           repliedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             example: null
+ *                             description: Timestamp when the owner replied
+ *                           metadata:
+ *                             type: object
+ *                             nullable: true
+ *                             example: null
+ *                             description: Additional metadata for the contribution
+ *                           paidAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             example: null
+ *                             description: Timestamp when the contribution was paid
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-12T20:44:17.921Z"
+ *                             description: Timestamp when the contribution was created
+ *                           updated_at:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-12T20:44:17.921Z"
+ *                             description: Timestamp when the contribution was last updated
+ *                       paymentUrl:
+ *                         type: string
+ *                         example: "https://checkout.paystack.com/gtdbq9ti8q22eu5"
+ *                         description: The Paystack payment URL to complete the contribution
+ *                 message:
+ *                   type: string
+ *                   example: "Contribution initialized successfully. Please complete payment"
+ *       400:
+ *         description: Bad Request - Missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Missing required fields"
+ */
+router.post('/contribute-item', contributionController.initiateContribution);
+/**
+ * @openapi
+ * /wishlist/contributions:
+ *   get:
+ *     summary: Retrieve contributions for a wishlist
+ *     description: Fetches a paginated list of contributions for a specific wishlist, excluding anonymous contributions for public view. Supports pagination through query parameters for page and limit. Requires the wishlist ID as a query parameter.
+ *     tags:
+ *       - Contributions
+ *     parameters:
+ *       - in: query
+ *         name: wishlistId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *         required: true
+ *         description: The unique identifier of the wishlist
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *           default: 1
+ *         description: The page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 20
+ *           default: 20
+ *         description: The number of records to return per page
+ *     responses:
+ *       200:
+ *         description: Contributions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "21c8b1c9-c4b1-438c-83c5-6f03f4d02f6b"
+ *                             description: The unique identifier of the contribution
+ *                           wishlistId:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                             description: The ID of the wishlist
+ *                           wishlistItemId:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *                             description: The ID of the wishlist item
+ *                           userId:
+ *                             type: string
+ *                             format: uuid
+ *                             nullable: true
+ *                             example: null
+ *                             description: The ID of the user making the contribution (if authenticated)
+ *                           contributorName:
+ *                             type: string
+ *                             example: "David Daviiiii"
+ *                             description: The name of the contributor
+ *                           contributorEmail:
+ *                             type: string
+ *                             format: email
+ *                             example: "daveuchenna2404@gmail.com"
+ *                             description: The email address of the contributor
+ *                           contributorPhone:
+ *                             type: string
+ *                             example: "09154064012"
+ *                             description: The phone number of the contributor
+ *                           message:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "Hello! Manage this small something"
+ *                             description: Optional message provided by the contributor
+ *                           isAnonymous:
+ *                             type: boolean
+ *                             example: false
+ *                             description: Indicates if the contribution is anonymous
+ *                           amount:
+ *                             type: string
+ *                             example: "200.00"
+ *                             description: The contribution amount
+ *                           status:
+ *                             type: string
+ *                             example: "completed"
+ *                             description: The status of the contribution (e.g., pending, completed)
+ *                           paymentReference:
+ *                             type: string
+ *                             example: "CONT-jTJG2VO-xJvEBYCD"
+ *                             description: The unique reference for the contribution payment
+ *                           paymentMethod:
+ *                             type: string
+ *                             example: "paystack"
+ *                             description: The payment method used for the contribution
+ *                           paystackReference:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "CONT-jTJG2VO-xJvEBYCD"
+ *                             description: The Paystack reference for the payment
+ *                           ownerReply:
+ *                             type: string
+ *                             nullable: true
+ *                             example: null
+ *                             description: The reply from the wishlist owner (if any)
+ *                           repliedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             example: null
+ *                             description: Timestamp when the owner replied
+ *                           metadata:
+ *                             type: object
+ *                             nullable: true
+ *                             example: null
+ *                             description: Additional metadata for the contribution
+ *                           paidAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             example: "2025-10-12T21:09:59.273Z"
+ *                             description: Timestamp when the contribution was paid
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-12T20:44:17.921Z"
+ *                             description: Timestamp when the contribution was created
+ *                           updated_at:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-12T21:09:59.273Z"
+ *                             description: Timestamp when the contribution was last updated
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                           description: The current page number
+ *                         limit:
+ *                           type: integer
+ *                           example: 20
+ *                           description: The number of records per page
+ *                         total:
+ *                           type: integer
+ *                           example: 2
+ *                           description: The total number of contributions
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 1
+ *                           description: The total number of pages
+ *                 message:
+ *                   type: string
+ *                   example: "Contributions retrieved successfully"
+ *       401:
+ *         description: Bad Request - Missing wishlist ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist ID is required"
+ */
+router.get('/contributions', contributionController.getWishlistContributions);
+/**
+ * @openapi
+ * /wishlist/item-contributions:
+ *   get:
+ *     summary: Retrieve contributions for a specific wishlist item
+ *     description: Fetches a paginated list of contributions for a specific wishlist item, excluding anonymous contributions for public view. Supports pagination through query parameters for page and limit. Requires the wishlist item ID as a query parameter.
+ *     tags:
+ *       - Contributions
+ *     parameters:
+ *       - in: query
+ *         name: wishlistItemId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *         required: true
+ *         description: The unique identifier of the wishlist item
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *           default: 1
+ *         description: The page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 20
+ *           default: 20
+ *         description: The number of records to return per page
+ *     responses:
+ *       200:
+ *         description: Item contributions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "21c8b1c9-c4b1-438c-83c5-6f03f4d02f6b"
+ *                             description: The unique identifier of the contribution
+ *                           wishlistId:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                             description: The ID of the wishlist
+ *                           wishlistItemId:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *                             description: The ID of the wishlist item
+ *                           userId:
+ *                             type: string
+ *                             format: uuid
+ *                             nullable: true
+ *                             example: null
+ *                             description: The ID of the user making the contribution (if authenticated)
+ *                           contributorName:
+ *                             type: string
+ *                             example: "David Daviiiii"
+ *                             description: The name of the contributor
+ *                           contributorEmail:
+ *                             type: string
+ *                             format: email
+ *                             example: "daveuchenna2404@gmail.com"
+ *                             description: The email address of the contributor
+ *                           contributorPhone:
+ *                             type: string
+ *                             example: "09154064012"
+ *                             description: The phone number of the contributor
+ *                           message:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "Hello! Manage this small something"
+ *                             description: Optional message provided by the contributor
+ *                           isAnonymous:
+ *                             type: boolean
+ *                             example: false
+ *                             description: Indicates if the contribution is anonymous
+ *                           amount:
+ *                             type: string
+ *                             example: "200.00"
+ *                             description: The contribution amount
+ *                           status:
+ *                             type: string
+ *                             example: "completed"
+ *                             description: The status of the contribution (e.g., pending, completed)
+ *                           paymentReference:
+ *                             type: string
+ *                             example: "CONT-jTJG2VO-xJvEBYCD"
+ *                             description: The unique reference for the contribution payment
+ *                           paymentMethod:
+ *                             type: string
+ *                             example: "paystack"
+ *                             description: The payment method used for the contribution
+ *                           paystackReference:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "CONT-jTJG2VO-xJvEBYCD"
+ *                             description: The Paystack reference for the payment
+ *                           ownerReply:
+ *                             type: string
+ *                             nullable: true
+ *                             example: null
+ *                             description: The reply from the wishlist owner (if any)
+ *                           repliedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             example: null
+ *                             description: Timestamp when the owner replied
+ *                           metadata:
+ *                             type: object
+ *                             nullable: true
+ *                             example: null
+ *                             description: Additional metadata for the contribution
+ *                           paidAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             example: "2025-10-12T21:09:59.273Z"
+ *                             description: Timestamp when the contribution was paid
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-12T20:44:17.921Z"
+ *                             description: Timestamp when the contribution was created
+ *                           updated_at:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-12T21:09:59.273Z"
+ *                             description: Timestamp when the contribution was last updated
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                           description: The current page number
+ *                         limit:
+ *                           type: integer
+ *                           example: 20
+ *                           description: The number of records per page
+ *                         total:
+ *                           type: integer
+ *                           example: 2
+ *                           description: The total number of contributions
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 1
+ *                           description: The total number of pages
+ *                 message:
+ *                   type: string
+ *                   example: "Item contributions retrieved successfully"
+ *       401:
+ *         description: Bad Request - Missing wishlist item ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist item ID is required"
+ */
+router.get('/item-contributions', contributionController.getItemContributions);
+/**
+ * @openapi
+ * /wishlist/top-contributors:
+ *   get:
+ *     summary: Retrieve top contributors for a wishlist
+ *     description: Fetches a list of top contributors for a specific wishlist, ordered by total contribution amount. Supports limiting the number of results through a query parameter. Requires the wishlist ID as a query parameter.
+ *     tags:
+ *       - Contributions
+ *     parameters:
+ *       - in: query
+ *         name: wishlistId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *         required: true
+ *         description: The unique identifier of the wishlist
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *           default: 10
+ *         description: The maximum number of top contributors to return
+ *     responses:
+ *       200:
+ *         description: Top contributors retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       rank:
+ *                         type: integer
+ *                         example: 1
+ *                         description: The rank of the contributor based on total contribution amount
+ *                       contributorName:
+ *                         type: string
+ *                         example: "David Daviiiii"
+ *                         description: The name of the contributor
+ *                       contributorInitials:
+ *                         type: string
+ *                         example: "DD"
+ *                         description: The initials of the contributor
+ *                       totalAmount:
+ *                         type: number
+ *                         example: 300
+ *                         description: The total amount contributed by the contributor
+ *                       contributionCount:
+ *                         type: integer
+ *                         nullable: true
+ *                         example: null
+ *                         description: The number of contributions made by the contributor
+ *                 message:
+ *                   type: string
+ *                   example: "Top contributors retrieved successfully"
+ *       401:
+ *         description: Bad Request - Missing wishlist ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist ID is required"
+ */
+router.get('/top-contributors', contributionController.getTopContributors);
+
 router.use(protect);
 /**
  * @openapi
@@ -319,7 +958,7 @@ router.use(protect);
  *                   type: string
  *                   example: "Failed to create category"
  */
-router.post('/create-category', wishlistController.createCategory);
+router.post('/create-category', categoryController.createCategory);
 /**
  * @openapi
  * /wishlist/categories:
@@ -397,7 +1036,7 @@ router.post('/create-category', wishlistController.createCategory);
  *                   type: string
  *                   example: "Failed to fetch active categories"
  */
-router.get('/categories', wishlistController.getCategories);
+router.get('/categories', categoryController.getCategories);
 /**
  * @openapi
  * /wishlist/update-category:
@@ -538,7 +1177,7 @@ router.get('/categories', wishlistController.getCategories);
  *                   type: string
  *                   example: "Failed to update category"
  */
-router.post('/update-category', wishlistController.updateCategory);
+router.post('/update-category', categoryController.updateCategory);
 /**
  * @openapi
  * /wishlist/delete-category:
@@ -645,7 +1284,7 @@ router.post('/update-category', wishlistController.updateCategory);
  *                   type: string
  *                   example: "Failed to delete category"
  */
-router.post('/delete-category', wishlistController.deleteCategory);
+router.post('/delete-category', categoryController.deleteCategory);
 /**
  * @openapi
  * /wishlist/create-item:
@@ -818,7 +1457,7 @@ router.post('/delete-category', wishlistController.deleteCategory);
  *                   type: string
  *                   example: "Failed to create curated item"
  */
-router.post('/create-item', multerUpload.single('image'), wishlistController.createCuratedItem);
+router.post('/create-item', multerUpload.single('image'), curatedItemController.createCuratedItem);
 /**
  * @openapi
  * /wishlist/items:
@@ -970,7 +1609,7 @@ router.post('/create-item', multerUpload.single('image'), wishlistController.cre
  *                   type: string
  *                   example: "User not found"
  */
-router.get('/items', wishlistController.getCuratedItems);
+router.get('/items', curatedItemController.getCuratedItems);
 /**
  * @openapi
  * /wishlist/update-item:
@@ -1136,7 +1775,7 @@ router.get('/items', wishlistController.getCuratedItems);
  *                   type: string
  *                   example: "Failed to update curated item"
  */
-router.post('/update-item', wishlistController.updateCuratedItem);
+router.post('/update-item', curatedItemController.updateCuratedItem);
 /**
  * @openapi
  * /wishlist/delete-item:
@@ -1230,7 +1869,7 @@ router.post('/update-item', wishlistController.updateCuratedItem);
  *                   type: string
  *                   example: "Failed to delete curated item"
  */
-router.post('/delete-item', wishlistController.deleteCuratedItem);
+router.post('/delete-item', curatedItemController.deleteCuratedItem);
 router.post('/seed-data', wishlistController.seedData);
 /**
  * @openapi
@@ -1570,7 +2209,7 @@ router.post('/create', wishlistController.createWishlist);
  *                   type: string
  *                   example: "Failed to add items to wishlist"
  */
-router.post('/add-item', wishlistController.addItemsToWishlist);
+router.post('/add-item', wishlistItemController.addItemsToWishlist);
 
 /**
  * @openapi
@@ -1742,5 +2381,704 @@ router.post('/add-item', wishlistController.addItemsToWishlist);
  *                   example: "User not found"
  */
 router.get('/user', wishlistController.getUserWishlist);
+/**
+ * @openapi
+ * /wishlist/stats:
+ *   get:
+ *     summary: Retrieve statistics for a wishlist
+ *     description: Fetches statistics for a specific wishlist, including total contributions, contributor count, view count, item count, funded item count, completion percentage, and top contributors. Requires the wishlist ID as a query parameter.
+ *     tags:
+ *       - Wishlist
+ *     parameters:
+ *       - in: query
+ *         name: wishlistId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *         required: true
+ *         description: The unique identifier of the wishlist
+ *     responses:
+ *       200:
+ *         description: Wishlist stats retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalContributed:
+ *                       type: string
+ *                       example: "0.00"
+ *                       description: The total amount contributed towards the wishlist
+ *                     contributorsCount:
+ *                       type: integer
+ *                       example: 0
+ *                       description: The number of contributors to the wishlist
+ *                     viewsCount:
+ *                       type: integer
+ *                       example: 0
+ *                       description: The number of views of the wishlist
+ *                     itemsCount:
+ *                       type: integer
+ *                       example: 12
+ *                       description: The total number of items in the wishlist
+ *                     fundedItemsCount:
+ *                       type: integer
+ *                       example: 0
+ *                       description: The number of fully funded items in the wishlist
+ *                     completionPercentage:
+ *                       type: integer
+ *                       example: 0
+ *                       description: The percentage of the wishlist's funding goal achieved (capped at 100)
+ *                     topContributors:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                             example: "Anonymous"
+ *                             description: The name of the contributor (or 'Anonymous' if anonymous)
+ *                           amount:
+ *                             type: string
+ *                             example: "0.00"
+ *                             description: The amount contributed by the supporter
+ *                           date:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-07T04:08:05.376Z"
+ *                             description: Timestamp of the contribution
+ *                           message:
+ *                             type: string
+ *                             nullable: true
+ *                             example: null
+ *                             description: Optional message provided by the contributor
+ *                       description: List of top contributors to the wishlist
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist stats retrieved successfully"
+ *       401:
+ *         description: Bad Request - Missing wishlist ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist ID is required"
+ */
+router.get('/stats', wishlistController.getWishlistStats);
+/**
+ * @openapi
+ * /wishlist/item:
+ *   get:
+ *     summary: Retrieve a wishlist item by unique link
+ *     description: Fetches a specific wishlist item using its unique link and tracks the view with the requester's IP address, user agent, and referrer. The unique link must be provided in the query parameters.
+ *     tags:
+ *       - Wishlist
+ *     parameters:
+ *       - in: query
+ *         name: uniqueLink
+ *         schema:
+ *           type: string
+ *           example: "wishlist-item-EOdxXz489N"
+ *         required: true
+ *         description: The unique link identifier for the wishlist item (e.g., the path portion after 'https://joygiver.com/')
+ *     responses:
+ *       200:
+ *         description: Wishlist item retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *                         description: The unique identifier of the wishlist item
+ *                       name:
+ *                         type: string
+ *                         example: "Business Strategy Book"
+ *                         description: The name of the wishlist item
+ *                       imageUrl:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "https://i.guim.co.uk/img/media/18badfc0b64b09f917fd14bbe47d73fd92feeb27/189_335_5080_3048/master/5080.jpg?width=1200&height=1200&quality=85&auto=format&fit=crop&s=1562112c7a64da36ae0a5e75075a0d12"
+ *                         description: The URL of the wishlist item's image
+ *                       price:
+ *                         type: string
+ *                         example: "25.00"
+ *                         description: The price of the wishlist item
+ *                       quantity:
+ *                         type: integer
+ *                         example: 1
+ *                         description: The requested quantity of the wishlist item
+ *                       quantityFulfilled:
+ *                         type: integer
+ *                         example: 0
+ *                         description: The quantity of the wishlist item that has been fulfilled
+ *                       amountContributed:
+ *                         type: string
+ *                         example: "0.00"
+ *                         description: The total amount contributed towards the wishlist item
+ *                       priority:
+ *                         type: integer
+ *                         example: 4
+ *                         description: The priority order of the wishlist item
+ *                       wishlistId:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                         description: The ID of the wishlist the item belongs to
+ *                       curatedItemId:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "0e066f7c-004d-4756-b2bc-665133333247"
+ *                         description: The ID of the curated item
+ *                       categoryId:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "02929535-d11d-433e-afd8-07aca0dc19f2"
+ *                         description: The ID of the category to which the item belongs
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-07T04:08:05.376Z"
+ *                         description: Timestamp when the wishlist item was created
+ *                       totalContributed:
+ *                         type: string
+ *                         example: "0.00"
+ *                         description: The total amount contributed towards the wishlist item
+ *                       contributorsCount:
+ *                         type: integer
+ *                         example: 0
+ *                         description: The number of contributors to the wishlist item
+ *                       isFunded:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Indicates if the wishlist item is fully funded
+ *                       fundedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                         example: null
+ *                         description: Timestamp when the wishlist item was fully funded
+ *                       uniqueLink:
+ *                         type: string
+ *                         example: "https://joygiver.com/wishlist-item-EOdxXz489N"
+ *                         description: The unique URL for accessing the wishlist item
+ *                       viewsCount:
+ *                         type: integer
+ *                         example: 13
+ *                         description: The number of views of the wishlist item
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist item retrieved successfully"
+ *       400:
+ *         description: Bad Request - Missing unique link
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Unique link is required"
+ *       404:
+ *         description: Not Found - Wishlist item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist not found"
+ */
+router.get('/item', wishlistItemController.getItemByLink);
+/**
+ * @openapi
+ * /wishlist/item-stats:
+ *   get:
+ *     summary: Retrieve statistics for a wishlist item
+ *     description: Fetches statistics for a specific wishlist item, including total contributions, contributor count, view count, completion percentage, funding status, and recent supporters (up to 5). Requires the wishlist item ID as a query parameter.
+ *     tags:
+ *       - Wishlist
+ *     parameters:
+ *       - in: query
+ *         name: wishlistItemId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *         required: true
+ *         description: The unique identifier of the wishlist item
+ *     responses:
+ *       200:
+ *         description: Wishlist stats retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalContributed:
+ *                       type: string
+ *                       example: "0.00"
+ *                       description: The total amount contributed towards the wishlist item
+ *                     contributorsCount:
+ *                       type: integer
+ *                       example: 0
+ *                       description: The number of contributors to the wishlist item
+ *                     viewsCount:
+ *                       type: integer
+ *                       example: 13
+ *                       description: The number of views of the wishlist item
+ *                     completionPercentage:
+ *                       type: integer
+ *                       example: 0
+ *                       description: The percentage of the wishlist item's funding goal achieved (capped at 100)
+ *                     isFunded:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Indicates if the wishlist item is fully funded
+ *                     recentSupporters:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                             example: "Anonymous"
+ *                             description: The name of the contributor (or 'Anonymous' if anonymous)
+ *                           amount:
+ *                             type: string
+ *                             example: "0.00"
+ *                             description: The amount contributed by the supporter
+ *                           date:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-07T04:08:05.376Z"
+ *                             description: Timestamp of the contribution
+ *                           message:
+ *                             type: string
+ *                             nullable: true
+ *                             example: null
+ *                             description: Optional message provided by the contributor
+ *                       description: List of recent supporters (up to 5)
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist stats retrieved successfully"
+ *       401:
+ *         description: Bad Request - Missing wishlist item ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist item ID is required"
+ *       404:
+ *         description: Not Found - Wishlist item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist item not found"
+ */
+router.get('/item-stats', wishlistItemController.getWishlistItemStats);
+/**
+ * @openapi
+ * /wishlist/reply-contributor:
+ *   post:
+ *     summary: Reply to a contributor
+ *     description: Allows the wishlist owner to send a reply to a contributor for a specific contribution. Requires user authentication and ensures the user owns the wishlist associated with the contribution. The reply message is required.
+ *     tags:
+ *       - Contributions
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               contributionId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "21c8b1c9-c4b1-438c-83c5-6f03f4d02f6b"
+ *                 description: The unique identifier of the contribution to reply to
+ *               ownerReply:
+ *                 type: string
+ *                 example: "Thank you for your contribution!"
+ *                 description: The reply message from the wishlist owner
+ *             required:
+ *               - contributionId
+ *               - ownerReply
+ *     responses:
+ *       200:
+ *         description: Reply sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: null
+ *                   example: null
+ *                   description: No data returned for this response
+ *                 message:
+ *                   type: string
+ *                   example: "Reply sent successfully"
+ *       400:
+ *         description: Bad Request - Missing owner reply message
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "ownerReply message is required"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ *       403:
+ *         description: Forbidden - User does not own the wishlist
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: Not Found - Contribution or wishlist not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Contribution not found"
+ */
+router.post('/reply-contributor', contributionController.replyToContributor);
+/**
+ * @openapi
+ * /wishlist/my-contributions:
+ *   get:
+ *     summary: Retrieve contributions for all user's wishlists
+ *     description: Fetches a paginated list of all contributions across all wishlists owned by the authenticated user. Contributions are sorted by creation date in descending order. Supports pagination through query parameters for page and limit. Requires user authentication.
+ *     tags:
+ *       - Contributions
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *           default: 1
+ *         description: The page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 20
+ *           default: 20
+ *         description: The number of records to return per page
+ *     responses:
+ *       200:
+ *         description: Contributions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "21c8b1c9-c4b1-438c-83c5-6f03f4d02f6b"
+ *                             description: The unique identifier of the contribution
+ *                           wishlistId:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                             description: The ID of the wishlist
+ *                           wishlistItemId:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *                             description: The ID of the wishlist item
+ *                           userId:
+ *                             type: string
+ *                             format: uuid
+ *                             nullable: true
+ *                             example: null
+ *                             description: The ID of the user making the contribution (if authenticated)
+ *                           contributorName:
+ *                             type: string
+ *                             example: "David Daviiiii"
+ *                             description: The name of the contributor
+ *                           contributorEmail:
+ *                             type: string
+ *                             format: email
+ *                             example: "daveuchenna2404@gmail.com"
+ *                             description: The email address of the contributor
+ *                           contributorPhone:
+ *                             type: string
+ *                             example: "09154064012"
+ *                             description: The phone number of the contributor
+ *                           message:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "Hello! Manage this small something"
+ *                             description: Optional message provided by the contributor
+ *                           isAnonymous:
+ *                             type: boolean
+ *                             example: false
+ *                             description: Indicates if the contribution is anonymous
+ *                           amount:
+ *                             type: string
+ *                             example: "200.00"
+ *                             description: The contribution amount
+ *                           status:
+ *                             type: string
+ *                             example: "completed"
+ *                             description: The status of the contribution (e.g., pending, completed)
+ *                           paymentReference:
+ *                             type: string
+ *                             example: "CONT-jTJG2VO-xJvEBYCD"
+ *                             description: The unique reference for the contribution payment
+ *                           paymentMethod:
+ *                             type: string
+ *                             example: "paystack"
+ *                             description: The payment method used for the contribution
+ *                           paystackReference:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "CONT-jTJG2VO-xJvEBYCD"
+ *                             description: The Paystack reference for the payment
+ *                           ownerReply:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "Thank you veru much for the gift"
+ *                             description: The reply from the wishlist owner (if any)
+ *                           repliedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             example: "2025-10-12T21:32:53.597Z"
+ *                             description: Timestamp when the owner replied
+ *                           metadata:
+ *                             type: object
+ *                             nullable: true
+ *                             example: null
+ *                             description: Additional metadata for the contribution
+ *                           paidAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             example: "2025-10-12T21:09:59.273Z"
+ *                             description: Timestamp when the contribution was paid
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-12T20:44:17.921Z"
+ *                             description: Timestamp when the contribution was created
+ *                           updated_at:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-12T21:32:53.598Z"
+ *                             description: Timestamp when the contribution was last updated
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                           description: The current page number
+ *                         limit:
+ *                           type: integer
+ *                           example: 20
+ *                           description: The number of records per page
+ *                         total:
+ *                           type: integer
+ *                           example: 2
+ *                           description: The total number of contributions
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 1
+ *                           description: The total number of pages
+ *                 message:
+ *                   type: string
+ *                   example: "Contributions retrieved successfully"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ */
+router.get('/my-contributions', contributionController.getMyWishlistsContributions);
+/**
+ * @openapi
+ * /wishlist/verify-payment:
+ *   get:
+ *     summary: Verify payment status for a contribution
+ *     description: Retrieves the payment status of a contribution by its payment reference. Requires admin authentication. Returns details including the contribution status, amount, contributor name, and payment timestamp.
+ *     tags:
+ *       - Contributions
+ *     parameters:
+ *       - in: query
+ *         name: reference
+ *         schema:
+ *           type: string
+ *           example: "CONT-jTJG2VO-xJvEBYCD"
+ *         required: true
+ *         description: The payment reference of the contribution to verify
+ *     responses:
+ *       200:
+ *         description: Payment status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: "completed"
+ *                       description: The status of the contribution (e.g., pending, completed)
+ *                     amount:
+ *                       type: string
+ *                       example: "200.00"
+ *                       description: The contribution amount
+ *                     contributorName:
+ *                       type: string
+ *                       example: "David Daviiiii"
+ *                       description: The name of the contributor
+ *                     paidAt:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                       example: "2025-10-12T21:09:59.273Z"
+ *                       description: Timestamp when the contribution was paid
+ *                 message:
+ *                   type: string
+ *                   example: "Payment status retrieved successfully"
+ *       403:
+ *         description: Forbidden - User is not an admin
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: Not Found - Reference or contribution not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "reference not found"
+ */
+router.get('/verify-payment', contributionController.verifyPayment);
 
 export { router as wishlistRouter };

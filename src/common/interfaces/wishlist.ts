@@ -11,6 +11,7 @@ export interface IWishlist {
 	totalContributed: number;
 	contributorsCount: number;
 	viewsCount: number;
+	sharesCount: number;
 	isPublic: boolean;
 	expiresAt?: Date;
 	createdAt: Date;
@@ -25,9 +26,16 @@ export interface IWishlistItem {
 	quantity: number;
 	quantityFulfilled: number;
 	amountContributed: number;
-	priority: number; // 1 = highest priority
+	priority: number; 
 	wishlistId: string;
-	curatedItemId?: string; // Reference to curated item if picked from defaults
+	curatedItemId?: string;
+	totalContributed: number;
+	uniqueLink: string;
+	contributorsCount: number;
+	isFunded: boolean;
+	fundedAt?: Date;
+	viewsCount: number;
+	sharesCount: number;
 	categoryId: string;
 	created_at?: Date;
 	updated_at?: Date;
@@ -55,23 +63,6 @@ export interface ICategory {
 	updated_at?: Date;
 }
 
-export interface IContribution {
-	id: string;
-	wishlistId: string;
-	wishlistItemId?: string; // Optional: specific item contributed to
-	contributorName: string;
-	contributorEmail?: string;
-	contributorPhone?: string;
-	amount: number;
-	message?: string;
-	isAnonymous: boolean;
-	status: ContributionStatus;
-	paymentReference: string;
-	paymentMethod: string;
-	created_at?: Date;
-	updated_at?: Date;
-}
-
 export interface IWishlistView {
 	id: string;
 	wishlistId: string;
@@ -79,4 +70,66 @@ export interface IWishlistView {
 	userAgent: string;
 	referrer?: string;
 	viewedAt: Date;
+}
+
+export interface IWishlistShare {
+	id: string;
+	wishlistId: string;
+	wishlistItemId?: string;
+	platform: 'whatsapp' | 'facebook' | 'twitter' | 'instagram' | 'email' | 'copy_link' | 'other';
+	ipAddress?: string;
+	created_at: Date;
+	updated_at: Date;
+}
+
+export interface IWishlistItemView {
+	id: string;
+	wishlistId: string;
+	ipAddress: string;
+	userAgent: string;
+	referrer?: string;
+	viewedAt: Date;
+}
+
+export interface IContribution {
+	id: string;
+	wishlistId: string;
+	wishlistItemId: string;
+	userId?: string;
+	contributorName: string;
+	contributorEmail: string;
+	contributorPhone?: string;
+	message?: string;
+	isAnonymous: boolean;
+	amount: number;
+	status: ContributionStatus;
+	paymentMethod: 'paystack' | 'flutterwave' | 'bank_transfer';
+	paymentReference: string;
+	paystackReference?: string;
+	ownerReply?: string;
+	repliedAt?: Date;
+	metadata?: Record<string, unknown>;
+	paidAt?: Date;
+	created_at: Date;
+	updated_at: Date;
+}
+
+export interface IContributorStats {
+	rank: number;
+	contributorName: string;
+	contributorInitials: string;
+	totalAmount: number;
+	contributionCount: number;
+	lastContribution: Date;
+}
+
+export interface IWishlistStats {
+	totalContributed: number;
+	contributorsCount: number;
+	viewsCount: number;
+	sharesCount: number;
+	itemsCount: number;
+	fundedItemsCount: number;
+	completionPercentage: number;
+	topContributors: IContributorStats[];
 }

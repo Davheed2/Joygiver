@@ -1,6 +1,9 @@
 import { knexDb } from '@/common/config';
 import { IWishlist } from '@/common/interfaces';
+import { AppError } from '@/common/utils';
 import { DateTime } from 'luxon';
+import { wishlistItemRepository } from './wishlistItemRepository';
+import { contributionRepository } from './contributionRepository';
 
 class WishlistRepository {
 	create = async (payload: Partial<IWishlist>) => {
@@ -36,6 +39,31 @@ class WishlistRepository {
 			.increment('totalContributed', amount)
 			.increment('contributorsCount', 1)
 			.returning('*');
+	};
+
+	getWishlistStats = async (wishlistId: string) => {
+		const wishlist = await this.findById(wishlistId);
+		if (!wishlist) {
+			throw new AppError('Wishlist not found', 404);
+		}
+
+		const items = await wishlistItemRepository.findByWishlistId(wishlistId);
+		const topContributors = await contributionRepository.getTopContributors(wishlistId, 3);
+
+		const totalPrice = items.reduce((sum, item) => sum + item.price, 0);
+		const fundedItems = items.filter((item) => item.isFunded).length;
+		const completionPercentage = totalPrice > 0 ? (wishlist.totalContributed / totalPrice) * 100 : 0;
+
+		return {
+			totalContributed: wishlist.totalContributed,
+			contributorsCount: wishlist.contributorsCount,
+			viewsCount: wishlist.viewsCount,
+			sharesCount: wishlist.sharesCount,
+			itemsCount: items.length,
+			fundedItemsCount: fundedItems,
+			completionPercentage: Math.min(100, Math.round(completionPercentage)),
+			topContributors,
+		};
 	};
 }
 

@@ -66,11 +66,16 @@ export const wishlistModuleSchema = z
 		//priority: z.number().int().positive().optional(),
 
 		// ==================== CONTRIBUTION FIELDS ====================
+		contributionId: uuidZ.optional(),
 		wishlistItemId: uuidZ.optional(),
-		contributorName: z.string().min(1).max(255).optional(),
+		contributorName: z
+			.string()
+			.min(2, 'Name must be at least 2 characters')
+			.max(255, 'Name must be less than 255 characters')
+			.optional(),
 		contributorEmail: z
 			.string()
-			.email()
+			.email('Invalid email address')
 			.optional()
 			.transform((s) => s?.toLowerCase()),
 		contributorPhone: z
@@ -79,7 +84,6 @@ export const wishlistModuleSchema = z
 			.refine(
 				(val) => {
 					if (!val) return true;
-
 					try {
 						const number = phoneUtil.parseAndKeepRawInput(val, 'NG');
 						return phoneUtil.isValidNumber(number);
@@ -88,26 +92,35 @@ export const wishlistModuleSchema = z
 					}
 				},
 				{
-					message: 'Invalid phone number. Please provide a valid international format (e.g., +2348012345678)',
+					message: 'Invalid phone number',
 				}
 			),
-		amount: z.number().positive().optional(),
-		message: z.string().max(500).optional(),
+		// ==================== OWNER REPLY ====================
+		ownerReply: z.string().max(1000, 'Reply must be less than 1000 characters').optional(),
+		// ==================== VIEW TRACKING ====================
+		ipAddress: z.string().optional(),
+		userAgent: z.string().optional(),
+		referrer: z.string().url().optional(),
+		// ==================== SHARE TRACKING ====================
+		platform: z.enum(['whatsapp', 'facebook', 'twitter', 'instagram', 'email', 'copy_link', 'other']).optional(),
+		message: z.string().max(500, 'Message must be less than 500 characters').optional(),
 		isAnonymous: z.boolean().optional(),
+		amount: z.number().positive('Amount must be positive').optional(),
 		paymentMethod: z.enum(['paystack', 'flutterwave', 'bank_transfer', 'card']).optional(),
 		paymentReference: z.string().optional(),
-		contributionId: uuidZ.optional(),
-        iconUrl: z.string().url().optional(),
+		iconUrl: z.string().url().optional(),
 
 		// ==================== QUERY PARAMS ====================
 		page: z.number().int().positive().optional(),
 		limit: z.number().int().positive().optional(),
-		sortBy: z.enum(['created_at', 'celebration_date', 'views_count', 'total_contributed']).optional(),
+		sortBy: z
+			.enum(['created_at', 'celebration_date', 'views_count', 'total_contributed', 'amount', 'contributor_name'])
+			.optional(),
 		sortOrder: z.enum(['asc', 'desc']).optional(),
-		referrer: z.string().url().optional(),
 		gender: z.enum(['male', 'female', 'prefer_not_to_say']).optional(),
 		minPrice: z.number().positive().optional(),
 		maxPrice: z.number().positive().optional(),
+		includeAnonymous: z.boolean().optional(),
 
 		// ==================== CURATED ITEM FIELDS (ADMIN) ====================
 		curatedItemName: z.string().min(1).max(255).optional(),

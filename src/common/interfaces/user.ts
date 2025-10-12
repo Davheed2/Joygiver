@@ -9,6 +9,7 @@ export interface IUser {
 	photo: string;
 	phone: string;
 	gender: string;
+	referralCode: string;
 	dob: string;
 	role: Role;
 	lastLogin: Date;

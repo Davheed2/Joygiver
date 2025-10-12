@@ -107,3 +107,38 @@ export interface PaystackResponse<T> {
 	message: string;
 	data: T;
 }
+
+
+export interface PaystackWebhookPayload<T> {
+	event: string;
+	data: T;
+}
+
+export interface PaystackTransferData {
+	reference: string;
+	transfer_code: string;
+	amount: number;
+	message?: string;
+	recipient?: {
+		active: boolean;
+		name: string;
+		domain: string;
+		details: {
+			account_number: string;
+			bank_code: string;
+			bank_name: string;
+		};
+	};
+}
+
+export interface PaystackChargeData {
+	reference: string;
+	amount: number;
+	currency: string;
+	status: string;
+	customer: {
+		email: string;
+		customer_code: string;
+	};
+	metadata?: Record<string, unknown>;
+}

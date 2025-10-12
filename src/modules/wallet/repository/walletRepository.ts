@@ -71,6 +71,9 @@ class WalletRepository {
 			throw new Error('Wallet not found');
 		}
 
+		const availableBalance = Number(wallet.availableBalance);
+        // const pendingBalance = Number(wallet.pendingBalance || 0);
+
 		await knexDb.transaction(async (trx) => {
 			// Add to pending balance first
 			await trx('wallets')
@@ -84,8 +87,8 @@ class WalletRepository {
 				walletId: wallet.id,
 				type: 'contribution',
 				amount,
-				balanceBefore: wallet.availableBalance,
-				balanceAfter: wallet.availableBalance,
+				balanceBefore: availableBalance,
+				balanceAfter: availableBalance,
 				reference,
 				description,
 			});
@@ -102,6 +105,7 @@ class WalletRepository {
 
 		await knexDb.transaction(async (trx) => {
 			const balanceBefore = wallet.availableBalance;
+			const balanceAfter = Number(balanceBefore) + Number(amount);
 
 			await trx('wallets')
 				.where({ id: wallet.id })
@@ -114,7 +118,7 @@ class WalletRepository {
 			await trx('wallet_transactions')
 				.where({ reference })
 				.update({
-					balanceAfter: balanceBefore + amount,
+					balanceAfter,
 					updated_at: new Date(),
 				});
 		});

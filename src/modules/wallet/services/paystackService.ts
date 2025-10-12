@@ -7,12 +7,10 @@ import {
 	IPaystackAccountVerification,
 	IPaystackTransferRecipient,
 	IPaystackTransfer,
-    IPaystackVerifyTransfer,
-    PaystackResponse,
+	IPaystackVerifyTransfer,
+	PaystackResponse,
 } from '@/common/interfaces';
 import { ENVIRONMENT } from '@/common/config';
-
-
 
 class PaystackService {
 	private readonly baseUrl = 'https://api.paystack.co';
@@ -152,7 +150,7 @@ class PaystackService {
 				throw new AppError('Failed to verify transfer', 500);
 			}
 
-			return response.data.data  as IPaystackVerifyTransfer;
+			return response.data.data as IPaystackVerifyTransfer;
 		} catch (err: unknown) {
 			this.handleAxiosError(err, 'Failed to verify transfer');
 		}
@@ -216,6 +214,73 @@ class PaystackService {
 			return response.data.data;
 		} catch (err: unknown) {
 			this.handleAxiosError(err, 'Failed to delete transfer recipient');
+		}
+	}
+
+	// Initialize payment (for contributions)
+	async initializePayment(data: {
+		email: string;
+		amount: number;
+		reference: string;
+		metadata?: Record<string, unknown>;
+		callbackUrl?: string;
+	}) {
+		try {
+			const amountInKobo = Math.round(data.amount * 100);
+
+			console.log('🔵 Initializing Paystack payment:', {
+				email: data.email,
+				amount: data.amount,
+				amountInKobo,
+				reference: data.reference,
+			});
+
+			const response = await axios.post(
+				`${this.baseUrl}/transaction/initialize`,
+				{
+					email: data.email,
+					amount: amountInKobo,
+					reference: data.reference,
+					metadata: data.metadata,
+					callback_url: data.callbackUrl,
+					currency: 'NGN',
+				},
+				{
+					headers: this.getHeaders(),
+				}
+			);
+
+			console.log('✅ Paystack payment initialized:', response.data);
+
+			if (!response.data.status) {
+				throw new AppError('Failed to initialize payment', 500);
+			}
+
+			return response.data.data;
+		} catch (err: unknown) {
+			console.error('❌ Paystack initializePayment error:', {
+				message: err,
+			});
+
+			this.handleAxiosError(err, 'Failed to initialize payment');
+		}
+	}
+
+	// Verify payment
+	async verifyPayment(reference: string) {
+		try {
+			const response = await axios.get(`${this.baseUrl}/transaction/verify/${reference}`, {
+				headers: this.getHeaders(),
+			});
+
+			if (!response.data.status) {
+				throw new AppError('Failed to verify payment', 500);
+			}
+
+			return response.data.data;
+		} catch (err: unknown) {
+			console.error('Paystack verifyPayment error:', err);
+			this.handleAxiosError(err, 'Failed to verify payment');
 		}
 	}
 
