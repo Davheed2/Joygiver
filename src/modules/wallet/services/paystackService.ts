@@ -1,4 +1,3 @@
-// @/modules/wallet/services/paystack.service.ts
 import axios from 'axios';
 import type { AxiosError, AxiosResponse } from 'axios';
 
@@ -8,15 +7,12 @@ import {
 	IPaystackAccountVerification,
 	IPaystackTransferRecipient,
 	IPaystackTransfer,
+    IPaystackVerifyTransfer,
+    PaystackResponse,
 } from '@/common/interfaces';
 import { ENVIRONMENT } from '@/common/config';
 
-// Generic wrapper for Paystack API responses
-interface PaystackResponse<T> {
-	status: boolean;
-	message: string;
-	data: T;
-}
+
 
 class PaystackService {
 	private readonly baseUrl = 'https://api.paystack.co';
@@ -49,8 +45,6 @@ class PaystackService {
 			}
 
 			let banks = response.data.data;
-
-			// 🔍 Local filtering by name or code
 			if (search) {
 				const query = search.toLowerCase();
 				banks = banks.filter((b) => b.name.toLowerCase().includes(query) || b.code.toLowerCase().includes(query));
@@ -158,7 +152,7 @@ class PaystackService {
 				throw new AppError('Failed to verify transfer', 500);
 			}
 
-			return response.data.data;
+			return response.data.data  as IPaystackVerifyTransfer;
 		} catch (err: unknown) {
 			this.handleAxiosError(err, 'Failed to verify transfer');
 		}

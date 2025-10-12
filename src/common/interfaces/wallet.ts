@@ -91,3 +91,19 @@ export interface IPaystackTransfer {
 	reason?: string;
 	createdAt?: string;
 }
+
+export interface IPaystackVerifyTransfer {
+	status: 'pending' | 'success' | 'failed' | 'reversed' | string;
+	message?: string;
+	id?: string;
+	transfer_code?: string;
+	reference?: string;
+	amount?: number;
+	recipient?: string;
+}
+
+export interface PaystackResponse<T> {
+	status: boolean;
+	message: string;
+	data: T;
+}

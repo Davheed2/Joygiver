@@ -77,3 +77,13 @@ export const errorHandler = (err, req: Request, res: Response, next: NextFunctio
 			return sendErrorDev(err, res);
 	}
 };
+
+export const extractErrorMessage = (error: unknown): string => {
+	if (error instanceof Error) return error.message;
+	if (typeof error === 'string') return error;
+	try {
+		return JSON.stringify(error);
+	} catch {
+		return 'Unknown error occurred';
+	}
+};

@@ -28,6 +28,7 @@ import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
 import { startAllQueuesAndWorkers, stopAllQueuesAndWorkers } from './queues';
+import { startAllWalletCrons } from './jobs/withdrawals';
 import { userRouter } from './modules/user/routes';
 import { wishlistRouter } from './modules/wishlist/routes';
 import { walletRouter } from './modules/wallet/routes';
@@ -215,6 +216,11 @@ process.on('unhandledRejection', async (error: Error) => {
 		process.exit(1);
 	});
 });
+
+if (process.env.NODE_ENV === 'production') {
+	startAllWalletCrons();
+	console.log('✅ Wallet cron jobs started');
+}
 
 async function shutdown() {
 	console.log('Shutting down...');
