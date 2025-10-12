@@ -177,6 +177,8 @@ class WithdrawalRequestRepository {
 				withdrawal.paymentReference
 			);
 
+			//console.
+
 			// Update with transfer code
 			await withdrawalRequestRepository.update(withdrawalId, {
 				transferCode: transfer.transfer_code,
@@ -225,12 +227,12 @@ class WithdrawalRequestRepository {
 		if (!currentBalance) {
 			throw new AppError('Balance fetch failed', 404);
 		}
-		const balanceAfter = currentBalance.availableBalance + withdrawal.amount;
+
+		const availableBalance = Number(currentBalance.availableBalance);
+		const amount = Number(withdrawal.amount);
+		const balanceAfter = availableBalance + amount;
 
 		await knexDb.transaction(async (trx) => {
-			if (withdrawal.status !== 'pending') {
-				throw new AppError('Only pending withdrawals can be failed', 400);
-			}
 			await trx('withdrawal_requests').where({ id: withdrawalId }).update({
 				status: 'failed',
 				failureReason: reason,
@@ -250,9 +252,9 @@ class WithdrawalRequestRepository {
 				userId: withdrawal.userId,
 				walletId: withdrawal.walletId,
 				type: 'refund',
-				amount: withdrawal.amount,
-				balanceBefore: currentBalance.availableBalance,
-				balanceAfter: balanceAfter,
+				amount,
+				balanceBefore: availableBalance,
+				balanceAfter,
 				reference: `${withdrawal.paymentReference}-REFUND`,
 				description: `Withdrawal failed: ${reason}`,
 				metadata: { withdrawalRequestId: withdrawal.id },

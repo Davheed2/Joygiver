@@ -1,4 +1,3 @@
-// @/modules/wallet/controllers/webhook.controller.ts
 import { Request, Response } from 'express';
 import crypto from 'crypto';
 import { AppError, AppResponse } from '@/common/utils';
@@ -6,17 +5,12 @@ import { catchAsync } from '@/middlewares';
 import { withdrawalRequestRepository } from '../repository';
 import { ENVIRONMENT } from '@/common/config';
 
-/**
- * Base structure of Paystack webhook payloads
- */
+
 interface PaystackWebhookPayload<T> {
 	event: string;
 	data: T;
 }
 
-/**
- * Relevant Paystack data types for transfers
- */
 interface PaystackTransferData {
 	reference: string;
 	transfer_code: string;
@@ -34,13 +28,7 @@ interface PaystackTransferData {
 	};
 }
 
-/**
- * Controller for handling Paystack webhooks
- */
 export class PaystackWebhookController {
-	/**
-	 * Verify Paystack webhook signature
-	 */
 	private verifySignature(req: Request): boolean {
 		const secret = ENVIRONMENT.PAYSTACK.SECRET_KEY || '';
 		const hash = crypto.createHmac('sha512', secret).update(JSON.stringify(req.body)).digest('hex');
@@ -48,9 +36,6 @@ export class PaystackWebhookController {
 		return hash === signature;
 	}
 
-	/**
-	 * Main webhook handler for Paystack
-	 */
 	handleWebhook = catchAsync(async (req: Request, res: Response) => {
 		if (!this.verifySignature(req)) {
 			console.error('❌ Invalid Paystack webhook signature');
@@ -86,16 +71,10 @@ export class PaystackWebhookController {
 		return AppResponse(res, 200, null, 'Webhook processed');
 	});
 
-	/**
-	 * Type guard for transfer events
-	 */
 	private isTransferData(data: unknown): data is PaystackTransferData {
 		return typeof data === 'object' && data !== null && 'reference' in data && 'transfer_code' in data;
 	}
 
-	/**
-	 * Handle successful transfer
-	 */
 	private async handleTransferSuccess(data: PaystackTransferData): Promise<void> {
 		const { reference, transfer_code, amount } = data;
 		console.log('✅ Transfer success:', { reference, transfer_code, amount });
@@ -120,9 +99,6 @@ export class PaystackWebhookController {
 		}
 	}
 
-	/**
-	 * Handle failed transfer
-	 */
 	private async handleTransferFailed(data: PaystackTransferData): Promise<void> {
 		const { reference, transfer_code, message } = data;
 		console.log('❌ Transfer failed:', { reference, transfer_code, message });
@@ -148,9 +124,6 @@ export class PaystackWebhookController {
 		}
 	}
 
-	/**
-	 * Handle reversed transfer
-	 */
 	private async handleTransferReversed(data: PaystackTransferData): Promise<void> {
 		const { reference, transfer_code } = data;
 		console.log('🔄 Transfer reversed:', { reference, transfer_code });
@@ -213,9 +186,6 @@ export class PaystackWebhookController {
 	// 	}
 	// }
 
-	/**
-	 * Test webhook endpoint (for dev/testing)
-	 */
 	testWebhook = catchAsync(async (req: Request, res: Response) => {
 		const body = req.body as PaystackWebhookPayload<unknown>;
 		console.log('🧪 Test webhook called:', body.event);

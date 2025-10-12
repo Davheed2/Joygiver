@@ -31,6 +31,7 @@ import { startAllQueuesAndWorkers, stopAllQueuesAndWorkers } from './queues';
 import { userRouter } from './modules/user/routes';
 import { wishlistRouter } from './modules/wishlist/routes';
 import { walletRouter } from './modules/wallet/routes';
+import { paystackWebhookController } from './modules/wallet/controller';
 
 dotenv.config();
 /**
@@ -47,6 +48,10 @@ process.on('uncaughtException', async (error: Error) => {
 const app: Express = express();
 const port = ENVIRONMENT.APP.PORT;
 const appName = ENVIRONMENT.APP.NAME;
+
+//webhook
+//app.use('/api/v1/webhooks', express.raw({ type: 'application/json' }), paystackWebhookController.handleWebhook);
+app.use('/api/v1/webhooks', express.json(), paystackWebhookController.handleWebhook);
 
 /**
  * Express configuration
