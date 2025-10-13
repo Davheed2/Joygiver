@@ -1446,7 +1446,7 @@ router.get('/referral-stats', friendsController.getReferralStats);
  *     summary: Retrieve user's referral code
  *     description: Fetches the referral code and referral link for the authenticated user. Requires user authentication.
  *     tags:
- *       - Referrals
+ *       - Friends
  *     responses:
  *       200:
  *         description: Referral code retrieved successfully
