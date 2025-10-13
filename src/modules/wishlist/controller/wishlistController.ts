@@ -96,12 +96,12 @@ export class WishlistController {
 						throw new AppError(`Curated item with ID ${item.curatedItemId} not found`, 404);
 					}
 
-					const uniqueId = nanoid(10);
+					const uniqueId = nanoid(6);
 					const uniqueLink = `https://joygiver.co/${slugify(curated.name || 'wishlist-item', {
 						lower: true,
 						strict: true,
 					})}-${uniqueId}`;
-					
+
 					return {
 						wishlistId: wishlist.id,
 						curatedItemId: curated.id,

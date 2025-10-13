@@ -68,7 +68,7 @@ export class WishlistItemController {
 				throw new AppError(`${curated.name} already exists in the wishlist`, 400);
 			}
 
-			const uniqueId = nanoid(10);
+			const uniqueId = nanoid(6);
 			const uniqueLink = `https://joygiver.co/${slugify(curated.name || 'wishlist-item', {
 				lower: true,
 				strict: true,
