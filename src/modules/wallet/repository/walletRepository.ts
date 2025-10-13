@@ -2,6 +2,7 @@ import { knexDb } from '@/common/config';
 import { IWallet } from '@/common/interfaces';
 import { DateTime } from 'luxon';
 import { payoutMethodRepository } from './payoutMethodRepository';
+import { AppError } from '@/common/utils';
 
 class WalletRepository {
 	create = async (payload: Partial<IWallet>) => {
@@ -72,7 +73,7 @@ class WalletRepository {
 		}
 
 		const availableBalance = Number(wallet.availableBalance);
-        // const pendingBalance = Number(wallet.pendingBalance || 0);
+		// const pendingBalance = Number(wallet.pendingBalance || 0);
 
 		await knexDb.transaction(async (trx) => {
 			// Add to pending balance first
@@ -115,28 +116,42 @@ class WalletRepository {
 				.update({ updated_at: new Date() });
 
 			// Update transaction record
-			await trx('wallet_transactions')
-				.where({ reference })
-				.update({
-					balanceAfter,
-					updated_at: new Date(),
-				});
+			await trx('wallet_transactions').where({ reference }).update({
+				balanceAfter,
+				updated_at: new Date(),
+			});
 		});
 
 		return await this.findByUserId(userId).then((w) => (w ? [w] : []));
 	};
 
 	getWalletSummary = async (userId: string) => {
-		const wallet = await this.findByUserId(userId);
+		let wallet: IWallet | null;
+		wallet = await walletRepository.findByUserId(userId);
+		if (!wallet) {
+			[wallet] = await walletRepository.create({
+				userId,
+				availableBalance: 0,
+				pendingBalance: 0,
+				totalReceived: 0,
+				totalWithdrawn: 0,
+			});
+		}
+		if (!wallet) {
+			throw new AppError('Wallet not found', 404);
+		}
+
 		const payoutMethods = await payoutMethodRepository.findByUserId(userId);
 
-		// Get contributors count (distinct contributors from contributions)
-		const contributorsResult = await knexDb('contributions')
-			.where({ receiverId: userId })
-			.countDistinct('contributorEmail as count')
+		// Get contributors count (distinct contributors from all user's wishlists)
+		const contributorsResult = await knexDb('contributions as c')
+			.join('wishlists as w', 'c.wishlistId', 'w.id')
+			.where('w.userId', userId)
+			.where('c.status', 'completed')
+			.countDistinct('c.contributorEmail as count')
 			.first();
 
-		// Get wishlist items count
+		// Get wishlist items count (from all user's wishlists)
 		const wishlistItemsResult = await knexDb('wishlist_items as wi')
 			.join('wishlists as w', 'wi.wishlistId', 'w.id')
 			.where('w.userId', userId)

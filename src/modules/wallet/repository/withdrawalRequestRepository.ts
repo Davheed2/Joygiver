@@ -1,5 +1,5 @@
 import { knexDb } from '@/common/config';
-import { IPayoutMethod, IWithdrawalRequest } from '@/common/interfaces';
+import { IPayoutMethod, IWallet, IWithdrawalRequest } from '@/common/interfaces';
 import { AppError } from '@/common/utils';
 import { DateTime } from 'luxon';
 import { nanoid } from 'nanoid';
@@ -56,7 +56,17 @@ class WithdrawalRequestRepository {
 	};
 
 	createWithdrawalRequest = async (userId: string, amount: number, payoutMethodId?: string) => {
-		const wallet = await walletRepository.findByUserId(userId);
+		let wallet: IWallet | null;
+		wallet = await walletRepository.findByUserId(userId);
+		if (!wallet) {
+			[wallet] = await walletRepository.create({
+				userId,
+				availableBalance: 0,
+				pendingBalance: 0,
+				totalReceived: 0,
+				totalWithdrawn: 0,
+			});
+		}
 		if (!wallet) {
 			throw new AppError('Wallet not found', 404);
 		}
@@ -223,7 +233,17 @@ class WithdrawalRequestRepository {
 			throw new AppError('Withdrawal request not found', 404);
 		}
 
-		const currentBalance = await walletRepository.findByUserId(withdrawal.userId);
+		let currentBalance: IWallet | null;
+		currentBalance = await walletRepository.findByUserId(withdrawal.userId);
+		if (!currentBalance) {
+			[currentBalance] = await walletRepository.create({
+				userId: withdrawal.userId,
+				availableBalance: 0,
+				pendingBalance: 0,
+				totalReceived: 0,
+				totalWithdrawn: 0,
+			});
+		}
 		if (!currentBalance) {
 			throw new AppError('Balance fetch failed', 404);
 		}

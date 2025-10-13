@@ -1,6 +1,7 @@
 import { knexDb } from '@/common/config';
-import { IWalletTransaction } from '@/common/interfaces';
+import { IWallet, IWalletTransaction } from '@/common/interfaces';
 import { walletRepository } from './walletRepository';
+import { AppError } from '@/common/utils';
 
 class WalletTransactionRepository {
 	create = async (payload: Partial<IWalletTransaction>) => {
@@ -35,11 +36,21 @@ class WalletTransactionRepository {
 	};
 
 	getTransactionHistory = async (userId: string, page = 1, limit = 20) => {
-		const wallet = await walletRepository.findByUserId(userId);
+		let wallet: IWallet | null;
+		wallet = await walletRepository.findByUserId(userId);
 		if (!wallet) {
-			throw new Error('Wallet not found');
+			[wallet] = await walletRepository.create({
+				userId,
+				availableBalance: 0,
+				pendingBalance: 0,
+				totalReceived: 0,
+				totalWithdrawn: 0,
+			});
 		}
-
+		if (!wallet) {
+			throw new AppError('Wallet not found', 404);
+		}
+		
 		const transactions = await walletTransactionRepository.findByWalletId(wallet.id, page, limit);
 		const total = await walletTransactionRepository.countByWalletId(wallet.id);
 

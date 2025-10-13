@@ -13,7 +13,6 @@ import slugify from 'slugify';
 
 export class WishlistItemController {
 	// Wishlist functions
-
 	addItemsToWishlist = catchAsync(async (req: Request, res: Response) => {
 		const { user } = req;
 		const { items, wishlistId } = req.body;
