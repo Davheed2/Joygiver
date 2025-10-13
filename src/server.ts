@@ -84,6 +84,8 @@ app.use(
 			'http://localhost:3001',
 			'http://localhost:8081',
 			'joygiver://localhost:8081',
+			'https://joygiver.co',
+			'https://www.joygiver.co',
 		],
 		credentials: true,
 	})
