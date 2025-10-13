@@ -140,10 +140,10 @@ class ContributorsRepository {
 			throw new AppError('This wishlist is not accepting contributions', 400);
 		}
 
-		const remainingAmount = item.price - item.totalContributed;
-		if (data.amount > remainingAmount) {
-			throw new AppError(`Amount exceeds remaining balance. Only ₦${remainingAmount.toLocaleString()} needed`, 400);
-		}
+		//const remainingAmount = item.price - item.totalContributed;
+		// if (data.amount > remainingAmount) {
+		// 	throw new AppError(`Amount exceeds remaining balance. Only ₦${remainingAmount.toLocaleString()} needed`, 400);
+		// }
 
 		if (data.amount < 100) {
 			throw new AppError('Minimum contribution amount is ₦100', 400);

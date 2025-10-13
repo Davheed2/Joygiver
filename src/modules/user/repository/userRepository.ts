@@ -45,6 +45,21 @@ class UserRepository {
 	findByIsDeleted = async (isDeleted: boolean) => {
 		return await knexDb.table('users').where({ isDeleted });
 	};
+
+	findByReferralCode = async (referralCode: string): Promise<IUser | null> => {
+		return await knexDb.table('users').where({ referralCode }).first();
+	};
+
+	findReferredUsers = async (userId: string): Promise<IUser[]> => {
+		return await knexDb.table('users').where({ referredBy: userId }).orderBy('created_at', 'desc');
+	};
+
+	incrementReferralCount = async (userId: string): Promise<void> => {
+		await knexDb('users')
+			.where({ id: userId })
+			.increment('referralCount', 1)
+			.update({ updated_at: DateTime.now().toJSDate() });
+	};
 }
 
 export const userRepository = new UserRepository();

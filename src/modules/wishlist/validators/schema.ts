@@ -45,14 +45,6 @@ export const wishlistModuleSchema = z
 			.array(
 				z.object({
 					curatedItemId: uuidZ.optional(),
-					// name: z.string().min(1).max(255),
-					// description: z.string().max(1000).optional(),
-					// imageUrl: z.string().url().optional(),
-					// price: z.number().positive(),
-					// quantity: z.number().int().positive().optional(),
-					// categoryId: uuidZ,
-					// productLink: z.string().url().optional(),
-					// priority: z.number().int().positive().optional(),
 				})
 			)
 			.optional(),
@@ -61,9 +53,7 @@ export const wishlistModuleSchema = z
 		name: z.string().min(1).max(255).optional(),
 		imageUrl: z.string().url().optional(),
 		price: z.number().positive().optional(),
-		//quantity: z.number().int().positive().optional(),
 		categoryId: uuidZ.optional(),
-		//priority: z.number().int().positive().optional(),
 
 		// ==================== CONTRIBUTION FIELDS ====================
 		contributionId: uuidZ.optional(),

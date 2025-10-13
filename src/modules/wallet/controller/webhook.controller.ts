@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
-import { AppResponse } from '@/common/utils';
+import { AppError, AppResponse } from '@/common/utils';
 import { catchAsync } from '@/middlewares';
 import { withdrawalRequestRepository } from '../repository';
 import { ENVIRONMENT } from '@/common/config';
@@ -16,10 +16,10 @@ export class PaystackWebhookController {
 	}
 
 	handleWebhook = catchAsync(async (req: Request, res: Response) => {
-		// if (!this.verifySignature(req)) {
-		// 	console.error('❌ Invalid Paystack webhook signature');
-		// 	throw new AppError('Invalid signature', 401);
-		// }
+		if (!this.verifySignature(req)) {
+			console.error('❌ Invalid Paystack webhook signature');
+			throw new AppError('Invalid signature', 401);
+		}
 
 		const body = req.body as PaystackWebhookPayload<unknown>;
 		console.log('📥 Paystack webhook received:', body.event);

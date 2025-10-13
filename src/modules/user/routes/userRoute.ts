@@ -1,4 +1,4 @@
-import { userController } from '../controller';
+import { friendsController, userController } from '../controller';
 import { protect } from '@/middlewares/protect';
 import express from 'express';
 
@@ -966,5 +966,539 @@ router.get('/profile', userController.getProfile);
  *                   example: "Failed to update user details"
  */
 router.post('/update', userController.updateUserDetails);
+/**
+ * @openapi
+ * /user/friends-wishlists:
+ *   get:
+ *     summary: Retrieve wishlists of friends
+ *     description: Fetches a list of wishlists belonging to the authenticated user's friends, including friend details and up to three top items per wishlist. Wishlists are sorted by celebration date (upcoming first). Requires user authentication.
+ *     tags:
+ *       - Friends
+ *       - Wishlist
+ *     responses:
+ *       200:
+ *         description: Friends wishlists retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       friendId:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "09127216-c1a9-468e-9a96-d712ab67edd9"
+ *                         description: The unique identifier of the friend
+ *                       friendName:
+ *                         type: string
+ *                         example: "Dave David"
+ *                         description: The full name of the friend
+ *                       friendInitials:
+ *                         type: string
+ *                         example: "DD"
+ *                         description: The initials of the friend
+ *                       isOnline:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Indicates if the friend is currently online
+ *                       lastActive:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-13T09:44:40.953Z"
+ *                         description: Timestamp of the friend's last activity
+ *                       wishlist:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "a2f42667-ba47-42e2-a3bb-57403a9132be"
+ *                             description: The unique identifier of the wishlist
+ *                           celebrationEvent:
+ *                             type: string
+ *                             example: "Birthday"
+ *                             description: The event associated with the wishlist
+ *                           celebrationDate:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-31T23:00:00.000Z"
+ *                             description: The date of the celebration
+ *                           itemsCount:
+ *                             type: integer
+ *                             nullable: true
+ *                             example: null
+ *                             description: The total number of items in the wishlist
+ *                           totalValue:
+ *                             type: number
+ *                             example: 0
+ *                             description: The total value of the wishlist items
+ *                           topItems:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 id:
+ *                                   type: string
+ *                                   format: uuid
+ *                                   example: "fe66ca27-9b5d-4d94-8008-3db8e1e810fe"
+ *                                   description: The unique identifier of the wishlist item
+ *                                 name:
+ *                                   type: string
+ *                                   example: "Casual Denim Jacket"
+ *                                   description: The name of the wishlist item
+ *                                 imageUrl:
+ *                                   type: string
+ *                                   nullable: true
+ *                                   example: "https://i.guim.co.uk/img/media/18badfc0b64b09f917fd14bbe47d73fd92feeb27/189_335_5080_3048/master/5080.jpg?width=1200&height=1200&quality=85&auto=format&fit=crop&s=1562112c7a64da36ae0a5e75075a0d12"
+ *                                   description: The URL of the wishlist item's image
+ *                           uniqueLink:
+ *                             type: string
+ *                             example: "https://joygiver.com/birthday-WBNmhb"
+ *                             description: The unique URL for accessing the wishlist
+ *                 message:
+ *                   type: string
+ *                   example: "Friends wishlists retrieved successfully"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ */
+router.get('/friends-wishlists', friendsController.getFriendsWishlists);
+/**
+ * @openapi
+ * /user/friends:
+ *   get:
+ *     summary: Retrieve user's friends list
+ *     description: Fetches a paginated list of the authenticated user's friends, including their details and wishlist information. Supports pagination through query parameters for page and limit. Requires user authentication.
+ *     tags:
+ *       - Friends
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *           default: 1
+ *         description: The page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 50
+ *           default: 50
+ *         description: The number of friends to return per page
+ *     responses:
+ *       200:
+ *         description: Friends list retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       totalFriends:
+ *                         type: integer
+ *                         example: 1
+ *                         description: The total number of friends
+ *                       friends:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                               format: uuid
+ *                               example: "09127216-c1a9-468e-9a96-d712ab67edd9"
+ *                               description: The unique identifier of the friend
+ *                             name:
+ *                               type: string
+ *                               example: "Dave David"
+ *                               description: The full name of the friend
+ *                             email:
+ *                               type: string
+ *                               format: email
+ *                               example: "uchennadavid2404@gmail.com"
+ *                               description: The email address of the friend
+ *                             initials:
+ *                               type: string
+ *                               example: "DD"
+ *                               description: The initials of the friend
+ *                             hasActiveWishlist:
+ *                               type: boolean
+ *                               example: true
+ *                               description: Indicates if the friend has at least one active wishlist
+ *                             wishlistCount:
+ *                               type: integer
+ *                               example: 3
+ *                               description: The total number of wishlists the friend has
+ *                             friendSince:
+ *                               type: string
+ *                               format: date-time
+ *                               example: "2025-10-13T09:27:46.670Z"
+ *                               description: Timestamp when the friendship was established
+ *                       pagination:
+ *                         type: object
+ *                         properties:
+ *                           page:
+ *                             type: integer
+ *                             example: 1
+ *                             description: The current page number
+ *                           limit:
+ *                             type: integer
+ *                             example: 50
+ *                             description: The number of friends per page
+ *                           total:
+ *                             type: integer
+ *                             example: 1
+ *                             description: The total number of friends
+ *                           totalPages:
+ *                             type: integer
+ *                             example: 1
+ *                             description: The total number of pages
+ *                 message:
+ *                   type: string
+ *                   example: "Friends list retrieved successfully"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ */
+router.get('/friends', friendsController.getFriendsList);
+/**
+ * @openapi
+ * /user/add-friend:
+ *   post:
+ *     summary: Add a friend
+ *     description: Adds a friend to the authenticated user's friend list using either the friend's email or referral code. Prevents adding oneself or an existing friend. Requires user authentication.
+ *     tags:
+ *       - Friends
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               identifier:
+ *                 type: string
+ *                 example: "uchennadavid2404@gmail.com"
+ *                 description: The email address or referral code of the user to add as a friend
+ *             required:
+ *               - identifier
+ *     responses:
+ *       201:
+ *         description: Friend added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: null
+ *                   example: null
+ *                   description: No data returned for this response
+ *                 message:
+ *                   type: string
+ *                   example: "Friend added successfully"
+ *       400:
+ *         description: Bad Request - Missing identifier, attempting to add self, or already friends
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Email or referral code is required"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ *       404:
+ *         description: Not Found - User or referral code not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ */
+router.post('/add-friend', friendsController.addFriend);
+/**
+ * @openapi
+ * /user/remove-friend:
+ *   post:
+ *     summary: Remove a friend
+ *     description: Removes a friend from the authenticated user's friend list using the friend's ID. Requires user authentication and an existing friendship.
+ *     tags:
+ *       - Friends
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               friendId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "09127216-c1a9-468e-9a96-d712ab67edd9"
+ *                 description: The unique identifier of the friend to remove
+ *             required:
+ *               - friendId
+ *     responses:
+ *       200:
+ *         description: Friend removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: null
+ *                   example: null
+ *                   description: No data returned for this response
+ *                 message:
+ *                   type: string
+ *                   example: "Friend removed successfully"
+ *       400:
+ *         description: Bad Request - Missing friend ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Friend ID is required"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ *       404:
+ *         description: Not Found - Friendship not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Friendship not found"
+ */
+router.post('/remove-friend', friendsController.removeFriend);
+/**
+ * @openapi
+ * /user/referral-stats:
+ *   get:
+ *     summary: Retrieve referral statistics
+ *     description: Fetches referral statistics for the authenticated user, including their referral code, total number of referrals, and details of referred users. Requires user authentication.
+ *     tags:
+ *       - Friends
+ *     responses:
+ *       200:
+ *         description: Referral stats retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       referralCode:
+ *                         type: string
+ *                         example: "NCYSDh"
+ *                         description: The referral code of the authenticated user
+ *                       totalReferrals:
+ *                         type: integer
+ *                         example: 0
+ *                         description: The total number of users referred by the authenticated user
+ *                       referredUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             name:
+ *                               type: string
+ *                               example: "null null"
+ *                               description: The full name of the referred user
+ *                             email:
+ *                               type: string
+ *                               format: email
+ *                               example: "daveuchenna2404@gmail.com"
+ *                               description: The email address of the referred user
+ *                             joinedAt:
+ *                               type: string
+ *                               format: date-time
+ *                               example: "2025-10-08T00:09:29.089Z"
+ *                               description: Timestamp when the referred user joined
+ *                 message:
+ *                   type: string
+ *                   example: "Referral stats retrieved successfully"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ *       404:
+ *         description: Not Found - User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ */
+router.get('/referral-stats', friendsController.getReferralStats);
+/**
+ * @openapi
+ * /user/referral-code:
+ *   get:
+ *     summary: Retrieve user's referral code
+ *     description: Fetches the referral code and referral link for the authenticated user. Requires user authentication.
+ *     tags:
+ *       - Referrals
+ *     responses:
+ *       200:
+ *         description: Referral code retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     referralCode:
+ *                       type: string
+ *                       example: "NCYSDh"
+ *                       description: The referral code of the authenticated user
+ *                     referralLink:
+ *                       type: string
+ *                       example: "http://localhost:3000/signup?ref=NCYSDh"
+ *                       description: The full referral link for the user
+ *                 message:
+ *                   type: string
+ *                   example: "Referral code retrieved successfully"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ *       404:
+ *         description: Not Found - User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ */
+router.get('/referral-code', friendsController.getMyReferralCode);
 
 export { router as userRouter };

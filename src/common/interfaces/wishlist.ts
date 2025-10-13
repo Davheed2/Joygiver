@@ -26,7 +26,7 @@ export interface IWishlistItem {
 	quantity: number;
 	quantityFulfilled: number;
 	amountContributed: number;
-	priority: number; 
+	priority: number;
 	wishlistId: string;
 	curatedItemId?: string;
 	totalContributed: number;
@@ -132,4 +132,27 @@ export interface IWishlistStats {
 	fundedItemsCount: number;
 	completionPercentage: number;
 	topContributors: IContributorStats[];
+}
+
+export interface IFriendWishlist {
+	friendId: string;
+	friendName: string;
+	friendInitials: string;
+	friendAvatar?: string;
+	isOnline: boolean;
+	lastActive: Date;
+	wishlist: {
+		id: string;
+		celebrationEvent: string;
+		celebrationDate?: Date;
+		itemsCount: number;
+		totalValue: number;
+		topItems: Array<{
+			id: string;
+			name: string;
+			imageUrl?: string;
+			emoji?: string;
+		}>;
+		uniqueLink: string;
+	};
 }

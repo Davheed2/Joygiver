@@ -56,6 +56,9 @@ export const userModuleSchema = z
 		otp: z.string().optional(),
 		method: z.enum(['email', 'sms']).optional(),
 		code: z.string().optional(),
+		referralCode: z.string().optional(),
+		identifier: z.string().optional(),
+		friendId: uuidZ.optional(),
 	})
 	.strict();
 

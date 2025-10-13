@@ -10,6 +10,8 @@ export interface IUser {
 	phone: string;
 	gender: string;
 	referralCode: string;
+	referredBy?: string;
+	referralCount: number;
 	dob: string;
 	role: Role;
 	lastLogin: Date;

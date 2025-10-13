@@ -467,6 +467,15 @@ const calculateFee = (amount: number) => {
 	return Math.round(totalFee * 100) / 100;
 };
 
+const generateReferralCode = () => {
+	return otpGenerator.generate(6, {
+		digits: true,
+		upperCaseAlphabets: true,
+		specialChars: false,
+		lowerCaseAlphabets: true,
+	});
+};
+
 const sendOtpEmail = async (email: string, name: string, otp: string): Promise<void> => {
 	const emailData: OtpEmailData = {
 		to: email,
@@ -548,4 +557,5 @@ export {
 	extractTokenFamily,
 	getRefreshTokenFromRequest,
 	calculateFee,
+	generateReferralCode,
 };

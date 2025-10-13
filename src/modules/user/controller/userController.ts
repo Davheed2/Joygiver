@@ -3,7 +3,7 @@ import {
 	AppError,
 	AppResponse,
 	extractTokenFamily,
-	generateOtp,
+	generateReferralCode,
 	generateTokenPair,
 	getRefreshTokenFromRequest,
 	invalidateTokenFamily,
@@ -16,14 +16,14 @@ import {
 	toJSON,
 } from '@/common/utils';
 import { catchAsync } from '@/middlewares';
-import { userRepository } from '@/modules/user/repository';
+import { friendsRepository, userRepository } from '@/modules/user/repository';
 import { ENVIRONMENT } from '@/common/config';
 import { IUser } from '@/common/interfaces';
 import { DateTime } from 'luxon';
 
 export class UserController {
 	signUp = catchAsync(async (req: Request, res: Response) => {
-		const { email, firstName, lastName, phone, gender, dob } = req.body;
+		const { email, firstName, lastName, phone, gender, dob, referralCode } = req.body;
 
 		if (!email && !phone) {
 			throw new AppError('Either email or phone number is required', 400);
@@ -47,7 +47,17 @@ export class UserController {
 			}
 		}
 
+		let referrer: IUser | null = null;
+		if (referralCode) {
+			referrer = await userRepository.findByReferralCode(referralCode);
+			console.log(referrer);
+			if (!referrer) {
+				throw new AppError('Invalid referral code', 400);
+			}
+		}
+
 		const isRegistrationComplete = !!(email && firstName && lastName && phone && dob);
+		const referCode = generateReferralCode();
 
 		const [user] = await userRepository.create({
 			email,
@@ -58,9 +68,14 @@ export class UserController {
 			dob,
 			ipAddress: req.ip,
 			isRegistrationComplete,
+			referralCode: referCode,
 		});
 		if (!user) {
 			throw new AppError('Failed to create user', 500);
+		}
+
+		if (referralCode) {
+			await friendsRepository.addFriendViaReferral(user.id, referralCode);
 		}
 
 		const currentRequestTime = DateTime.now();
@@ -81,7 +96,7 @@ export class UserController {
 			otpExpires,
 			otpRetries: (user.otpRetries || 0) + 1,
 		});
-		
+
 		if (email && user.email) {
 			await sendOtpEmail(user.email, user.firstName, generatedOtp);
 			console.log(`OTP sent to email ${user.email}: ${generatedOtp}`);
