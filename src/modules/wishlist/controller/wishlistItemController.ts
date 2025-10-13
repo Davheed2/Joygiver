@@ -8,6 +8,8 @@ import {
 	wishlistRepository,
 } from '../repository';
 import { IWishlistItem } from '@/common/interfaces';
+import { nanoid } from 'nanoid';
+import slugify from 'slugify';
 
 export class WishlistItemController {
 	// Wishlist functions
@@ -65,6 +67,13 @@ export class WishlistItemController {
 			if (existingItem) {
 				throw new AppError(`${curated.name} already exists in the wishlist`, 400);
 			}
+
+			const uniqueId = nanoid(10);
+			const uniqueLink = `https://joygiver.com/${slugify(curated.name || 'wishlist-item', {
+				lower: true,
+				strict: true,
+			})}-${uniqueId}`;
+
 			wishlistItems.push({
 				wishlistId: wishlist.id,
 				curatedItemId: curated.id,
@@ -73,6 +82,7 @@ export class WishlistItemController {
 				price: curated.price,
 				categoryId: curated.categoryId,
 				priority: index + 1,
+				uniqueLink,
 			});
 		}
 
