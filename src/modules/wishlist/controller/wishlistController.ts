@@ -89,14 +89,19 @@ export class WishlistController {
 
 				const fetchedItems = await curatedItemRepository.findByIds(curatedItemIds);
 				const fetchedItemsMap = new Map(fetchedItems.map((item) => [item.id, item]));
-				const uniqueId = nanoid(10);
-				const uniqueLink = `https://joygiver.com/${slugify('wishlist-item', { lower: true, strict: true })}-${uniqueId}`;
 
 				const wishlistItems = items.map((item: { curatedItemId: string }, index: number) => {
 					const curated = fetchedItemsMap.get(item.curatedItemId);
 					if (!curated) {
 						throw new AppError(`Curated item with ID ${item.curatedItemId} not found`, 404);
 					}
+
+					const uniqueId = nanoid(10);
+					const uniqueLink = `https://joygiver.com/${slugify(curated.name || 'wishlist-item', {
+						lower: true,
+						strict: true,
+					})}-${uniqueId}`;
+					
 					return {
 						wishlistId: wishlist.id,
 						curatedItemId: curated.id,
