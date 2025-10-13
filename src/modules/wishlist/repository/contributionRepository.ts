@@ -176,7 +176,7 @@ class ContributorsRepository {
 				contributorName: data.contributorName,
 				itemName: item.name,
 			},
-			callbackUrl: `${wishlist.uniqueLink}/success`,
+			callbackUrl: `${wishlist.uniqueLink}`,
 		});
 
 		return {

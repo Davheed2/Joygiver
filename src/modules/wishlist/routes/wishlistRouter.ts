@@ -24,7 +24,7 @@ const router = express.Router();
  *         name: uniqueLink
  *         schema:
  *           type: string
- *           example: "https://joygiver.com/birthday-WBNmhb"
+ *           example: "https://joygiver.co/birthday-WBNmhb"
  *         required: true
  *         description: The unique link of the wishlist to retrieve
  *     responses:
@@ -62,7 +62,7 @@ const router = express.Router();
  *                             description: The date of the celebration event
  *                           uniqueLink:
  *                             type: string
- *                             example: "https://joygiver.com/birthday-WBNmhb"
+ *                             example: "https://joygiver.co/birthday-WBNmhb"
  *                             description: The unique URL for accessing the wishlist
  *                           status:
  *                             type: string
@@ -1941,7 +1941,7 @@ router.post('/seed-data', wishlistController.seedData);
  *                         description: The date of the celebration event
  *                       uniqueLink:
  *                         type: string
- *                         example: "https://joygiver.com/birthday-oB1J-V"
+ *                         example: "https://joygiver.co/birthday-oB1J-V"
  *                         description: A unique URL for accessing the wishlist
  *                       status:
  *                         type: string
@@ -2254,7 +2254,7 @@ router.post('/add-item', wishlistItemController.addItemsToWishlist);
  *                             description: The date of the celebration event
  *                           uniqueLink:
  *                             type: string
- *                             example: "https://joygiver.com/birthday-oB1J-V"
+ *                             example: "https://joygiver.co/birthday-oB1J-V"
  *                             description: The unique URL for accessing the wishlist
  *                           status:
  *                             type: string
@@ -2493,7 +2493,7 @@ router.get('/stats', wishlistController.getWishlistStats);
  *           type: string
  *           example: "wishlist-item-EOdxXz489N"
  *         required: true
- *         description: The unique link identifier for the wishlist item (e.g., the path portion after 'https://joygiver.com/')
+ *         description: The unique link identifier for the wishlist item (e.g., the path portion after 'https://joygiver.co/')
  *     responses:
  *       200:
  *         description: Wishlist item retrieved successfully
@@ -2584,7 +2584,7 @@ router.get('/stats', wishlistController.getWishlistStats);
  *                         description: Timestamp when the wishlist item was fully funded
  *                       uniqueLink:
  *                         type: string
- *                         example: "https://joygiver.com/wishlist-item-EOdxXz489N"
+ *                         example: "https://joygiver.co/wishlist-item-EOdxXz489N"
  *                         description: The unique URL for accessing the wishlist item
  *                       viewsCount:
  *                         type: integer

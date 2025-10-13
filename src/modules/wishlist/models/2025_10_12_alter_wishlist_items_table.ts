@@ -15,7 +15,7 @@ export async function up(knex: Knex): Promise<void> {
 
 	for (const item of items) {
 		const uniqueId = nanoid(10);
-		const uniqueLink = `https://joygiver.com/${slugify('wishlist-item', { lower: true, strict: true })}-${uniqueId}`;
+		const uniqueLink = `https://joygiver.co/${slugify('wishlist-item', { lower: true, strict: true })}-${uniqueId}`;
 
 		await knex('wishlist_items').where({ id: item.id }).update({ uniqueLink });
 	}

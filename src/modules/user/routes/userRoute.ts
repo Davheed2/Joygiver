@@ -1060,7 +1060,7 @@ router.post('/update', userController.updateUserDetails);
  *                                   description: The URL of the wishlist item's image
  *                           uniqueLink:
  *                             type: string
- *                             example: "https://joygiver.com/birthday-WBNmhb"
+ *                             example: "https://joygiver.co/birthday-WBNmhb"
  *                             description: The unique URL for accessing the wishlist
  *                 message:
  *                   type: string

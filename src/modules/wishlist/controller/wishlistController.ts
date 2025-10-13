@@ -62,7 +62,7 @@ export class WishlistController {
 		}
 
 		const uniqueId = nanoid(6);
-		const uniqueLink = `https://joygiver.com/${slugify(celebrationEvent, { lower: true, strict: true })}-${uniqueId}`;
+		const uniqueLink = `https://joygiver.co/${slugify(celebrationEvent, { lower: true, strict: true })}-${uniqueId}`;
 
 		const expiresAt = new Date(celebrationDateObj);
 		expiresAt.setDate(expiresAt.getDate() + 7);
@@ -97,7 +97,7 @@ export class WishlistController {
 					}
 
 					const uniqueId = nanoid(10);
-					const uniqueLink = `https://joygiver.com/${slugify(curated.name || 'wishlist-item', {
+					const uniqueLink = `https://joygiver.co/${slugify(curated.name || 'wishlist-item', {
 						lower: true,
 						strict: true,
 					})}-${uniqueId}`;
@@ -137,7 +137,7 @@ export class WishlistController {
 			throw new AppError('Unique link is required', 400);
 		}
 
-		const appendLink = `https://joygiver.com/${uniqueLink}`;
+		const appendLink = `https://joygiver.co/${uniqueLink}`;
 		const wishlist = await wishlistRepository.findByUniqueLink(appendLink);
 		if (!wishlist) {
 			throw new AppError('Wishlist not found', 404);
