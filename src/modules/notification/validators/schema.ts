@@ -10,8 +10,7 @@ export const notificationModuleSchema = z
 		token: z
 			.string()
 			.min(100, 'Device token must be at least 100 characters')
-			.max(200, 'Device token must not exceed 200 characters')
-			.regex(/^[A-Za-z0-9_-]+$/, 'Device token can only contain letters, numbers, hyphens, and underscores'),
+			.max(200, 'Device token must not exceed 200 characters'),
 		platform: z.enum(['ios', 'android'], {
 			errorMap: () => ({ message: 'Platform must be either "ios" or "android"' }),
 		}),
