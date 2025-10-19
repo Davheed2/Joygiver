@@ -1501,4 +1501,6 @@ router.get('/referral-stats', friendsController.getReferralStats);
  */
 router.get('/referral-code', friendsController.getMyReferralCode);
 
+router.get('/search', userController.partialFindByUsernameOrEmail);
+
 export { router as userRouter };

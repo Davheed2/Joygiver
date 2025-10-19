@@ -9,3 +9,5 @@ export * from './tokenFamily';
 export * from './wishlist';
 export * from './wallet';
 export * from './friends';
+export * from './notification';
+export * from './sms';

@@ -5,12 +5,14 @@ import {
 	extractTokenFamily,
 	generateReferralCode,
 	generateTokenPair,
+	generateUniqueUsername,
 	getRefreshTokenFromRequest,
 	invalidateTokenFamily,
 	invalidateUserTokenFamilies,
 	parseTokenDuration,
 	sendLoginEmail,
 	sendOtpEmail,
+	sendOtpSms,
 	sendWelcomeEmail,
 	setCookie,
 	toJSON,
@@ -23,7 +25,7 @@ import { DateTime } from 'luxon';
 
 export class UserController {
 	signUp = catchAsync(async (req: Request, res: Response) => {
-		const { email, firstName, lastName, phone, gender, dob, referralCode } = req.body;
+		const { email, firstName, lastName, username, phone, gender, dob, referralCode } = req.body;
 
 		if (!email && !phone) {
 			throw new AppError('Either email or phone number is required', 400);
@@ -47,6 +49,16 @@ export class UserController {
 			}
 		}
 
+		let finalUsername = username;
+		if (username) {
+			const existingUsernameUser = await userRepository.findByUsername(username);
+			if (existingUsernameUser) {
+				throw new AppError('User with this username already exists', 409);
+			}
+		} else {
+			finalUsername = await generateUniqueUsername(lastName);
+		}
+
 		let referrer: IUser | null = null;
 		if (referralCode) {
 			referrer = await userRepository.findByReferralCode(referralCode);
@@ -56,13 +68,14 @@ export class UserController {
 			}
 		}
 
-		const isRegistrationComplete = !!(email && firstName && lastName && phone && dob);
+		const isRegistrationComplete = !!(email && firstName && lastName && phone && dob && username);
 		const referCode = generateReferralCode();
 
 		const [user] = await userRepository.create({
 			email,
 			firstName,
 			lastName,
+			username: finalUsername,
 			phone,
 			gender,
 			dob,
@@ -101,9 +114,18 @@ export class UserController {
 			await sendOtpEmail(user.email, user.firstName, generatedOtp);
 			console.log(`OTP sent to email ${user.email}: ${generatedOtp}`);
 		} else if (phone && user.phone) {
-			//await sendOtpSms(user.phone, generatedOtp);
-			console.log(`OTP sent to phone ${user.phone}: ${generatedOtp}`);
+			const smsResult = await sendOtpSms(user.phone, generatedOtp, 'dnd');
+
+			if (smsResult.success) {
+				console.log(`OTP sent to phone ${user.phone}: ${generatedOtp}`);
+			} else {
+				// Log the error but don't fail registration
+				console.error(`Failed to send OTP SMS to ${user.phone}:`, smsResult.error);
+				// Optionally, you can still allow registration to proceed
+				// or throw an error if SMS is critical
+			}
 		}
+
 		await sendWelcomeEmail(user.email, user.firstName);
 
 		return AppResponse(res, 201, toJSON([user]), 'User created successfully');
@@ -157,8 +179,13 @@ export class UserController {
 			await sendOtpEmail(user.email, user.firstName, generatedOtp);
 			console.log(`OTP sent to email ${user.email}: ${generatedOtp}`);
 		} else if (phone && user.phone) {
-			//await sendOtpSms(user.phone, generatedOtp);
-			console.log(`OTP sent to phone ${user.phone}: ${generatedOtp}`);
+			const smsResult = await sendOtpSms(user.phone, generatedOtp, 'dnd');
+
+			if (!smsResult.success) {
+				throw new AppError('Failed to send OTP via SMS. Please try again.', 500);
+			}
+
+			console.log(`OTP resent to phone ${user.phone}: ${generatedOtp}`);
 		}
 
 		return AppResponse(res, 200, toJSON([user]), 'Please request OTP to complete sign in.');
@@ -168,7 +195,7 @@ export class UserController {
 		const { email, phone } = req.body;
 
 		if (!email && !phone) {
-			throw new AppError('Email or phone number is required', 400);
+			throw new AppError('Either email or phone number is required', 400);
 		}
 
 		let user: IUser | null = null;
@@ -213,8 +240,13 @@ export class UserController {
 			await sendOtpEmail(user.email, user.firstName, generatedOtp);
 			console.log(`OTP sent to email ${user.email}: ${generatedOtp}`);
 		} else if (phone && user.phone) {
-			//await sendOtpSms(user.phone, generatedOtp);
-			console.log(`OTP sent to phone ${user.phone}: ${generatedOtp}`);
+			const smsResult = await sendOtpSms(user.phone, generatedOtp, 'dnd');
+
+			if (!smsResult.success) {
+				throw new AppError('Failed to send OTP via SMS. Please try again.', 500);
+			}
+
+			console.log(`OTP resent to phone ${user.phone}: ${generatedOtp}`);
 		} else {
 			throw new AppError('User does not have a valid contact method', 400);
 		}
@@ -279,7 +311,7 @@ export class UserController {
 
 	updateUserDetails = catchAsync(async (req: Request, res: Response) => {
 		const { user } = req;
-		const { email, firstName, lastName, dob, phone } = req.body;
+		const { email, firstName, lastName, dob, phone, username } = req.body;
 
 		if (!user) {
 			throw new AppError('User not found', 404);
@@ -309,6 +341,12 @@ export class UserController {
 				throw new AppError('User with this phone number already exists', 409);
 			}
 		}
+		if (username && username !== existingUser.username) {
+			const existingUsernameUser = await userRepository.findByUsername(username);
+			if (existingUsernameUser && existingUsernameUser.id !== existingUser.id) {
+				throw new AppError('User with this username already exists', 409);
+			}
+		}
 
 		const updateData: Partial<IUser> = {};
 		if (email !== undefined) updateData.email = email;
@@ -316,6 +354,7 @@ export class UserController {
 		if (lastName !== undefined) updateData.lastName = lastName;
 		if (dob !== undefined) updateData.dob = dob;
 		if (phone !== undefined) updateData.phone = phone;
+		if (username !== undefined) updateData.username = username;
 
 		const updatedUser = { ...existingUser, ...updateData };
 		const willBeComplete = !!(
@@ -323,7 +362,8 @@ export class UserController {
 			updatedUser.firstName &&
 			updatedUser.lastName &&
 			updatedUser.phone &&
-			updatedUser.dob
+			updatedUser.dob &&
+			updatedUser.username
 		);
 
 		if (willBeComplete) {
@@ -395,6 +435,21 @@ export class UserController {
 		}
 
 		return AppResponse(res, 200, toJSON([extinguishUser]), 'Profile retrieved successfully');
+	});
+
+	partialFindByUsernameOrEmail = catchAsync(async (req: Request, res: Response) => {
+		const { usernameOrEmail } = req.query;
+
+		if (!usernameOrEmail) {
+			throw new AppError('Please provide a username or email', 400);
+		}
+
+		const users = await userRepository.partialFindByUsernameOrEmail(usernameOrEmail as string);
+		if (!users) {
+			throw new AppError('No users found', 404);
+		}
+
+		return AppResponse(res, 200, toJSON(users), 'Users retrieved successfully');
 	});
 }
 

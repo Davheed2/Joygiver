@@ -49,4 +49,11 @@ export interface IEnvironment {
 		SECRET_KEY: string;
 		PUBLIC_KEY: string;
 	};
+	TERMII: {
+		API_KEY: string;
+		SENDER_ID: string;
+	};
+	FIREBASE: {
+		SERVICE_ACCOUNT_KEY: string;
+	}
 }

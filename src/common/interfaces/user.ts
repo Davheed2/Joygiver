@@ -3,6 +3,7 @@ import { Role } from '../constants';
 export interface IUser {
 	id: string;
 	firstName: string;
+	username: string;
 	lastName: string;
 	email: string;
 	ipAddress: string;
@@ -15,6 +16,7 @@ export interface IUser {
 	dob: string;
 	role: Role;
 	lastLogin: Date;
+	lastActive: Date;
 	isSuspended: boolean;
 	isRegistrationComplete: boolean;
 	otp: string;

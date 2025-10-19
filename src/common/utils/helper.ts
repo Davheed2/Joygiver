@@ -3,14 +3,15 @@ import { randomBytes, randomInt, createHash } from 'crypto';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { encode } from 'hi-base32';
 import { ENVIRONMENT } from '../config';
-import { IHashData, ITokenFamily, LoginEmailData, OtpEmailData, WelcomeEmailData } from '../interfaces';
+import { IHashData, ISmsResult, ITokenFamily, LoginEmailData, OtpEmailData, WelcomeEmailData } from '../interfaces';
 import type { Response, Request } from 'express';
 import { promisify } from 'util';
 import otpGenerator from 'otp-generator';
 import { addEmailToQueue, redisConnection } from '@/queues';
 import AppError from './appError';
-import { tokenFamilyRepository } from '@/modules/user/repository';
+import { tokenFamilyRepository, userRepository } from '@/modules/user/repository';
 import { RefreshTokenPayload } from '../types';
+import { smsService } from '@/services';
 
 const generateRandomString = () => {
 	return randomBytes(32).toString('hex');
@@ -517,6 +518,124 @@ const sendLoginEmail = async (email: string, name: string, time: string): Promis
 	});
 };
 
+const sendOtpSms = async (
+	phone: string,
+	otp: string,
+	channel: 'generic' | 'dnd' | 'whatsapp' = 'dnd'
+): Promise<ISmsResult> => {
+	try {
+		const result = await smsService.sendOtpSms({
+			phone,
+			otp,
+			channel,
+		});
+
+		if (!result.success) {
+			console.error(`Failed to send OTP to ${phone}:`, result.error);
+		}
+
+		return result;
+	} catch (error) {
+		console.error('Error sending OTP SMS:', error);
+		return {
+			success: false,
+			error: 'Failed to send OTP',
+		};
+	}
+};
+
+/**
+ * Send transaction alert SMS
+ */
+const sendTransactionAlertSms = async (
+	phone: string,
+	amount: number,
+	type: 'credit' | 'debit',
+	balance: number,
+	currency: string = 'NGN'
+): Promise<ISmsResult> => {
+	try {
+		const result = await smsService.sendTransactionAlert(phone, amount, type, balance, currency);
+
+		if (!result.success) {
+			console.error(`Failed to send transaction alert to ${phone}:`, result.error);
+		}
+
+		return result;
+	} catch (error) {
+		console.error('Error sending transaction alert:', error);
+		return {
+			success: false,
+			error: 'Failed to send transaction alert',
+		};
+	}
+};
+
+/**
+ * Validate and format phone number
+ */
+const validateAndFormatPhone = (
+	phone: string
+): {
+	isValid: boolean;
+	formatted: string;
+	error?: string;
+} => {
+	if (!phone) {
+		return {
+			isValid: false,
+			formatted: '',
+			error: 'Phone number is required',
+		};
+	}
+
+	const isValid = smsService.validatePhone(phone);
+
+	if (!isValid) {
+		return {
+			isValid: false,
+			formatted: '',
+			error: 'Invalid Nigerian phone number format',
+		};
+	}
+
+	const formatted = smsService.formatPhone(phone);
+
+	return {
+		isValid: true,
+		formatted,
+	};
+};
+
+const generateUniqueUsername = async (lastName: string): Promise<string> => {
+	const maxAttempts = 10; 
+	if (!lastName) throw new Error('Last name is required to generate a username.');
+
+	let cleanLastName = lastName
+		.normalize('NFD') 
+		.replace(/[\u0300-\u036f]/g, '') 
+		.replace(/[^a-zA-Z0-9]/g, '') 
+		.trim()
+		.toLowerCase();
+	if (!cleanLastName) {
+		cleanLastName = 'user';
+	}
+
+	const formattedLastName = cleanLastName.charAt(0).toUpperCase() + cleanLastName.slice(1);
+
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		const randomDigits = Math.floor(1000 + Math.random() * 90000); 
+		const username = `${formattedLastName}#${randomDigits}`;
+
+		const existingUser = await userRepository.findByUsername(username);
+		if (!existingUser) {
+			return username;
+		}
+	}
+
+	throw new Error('Failed to generate a unique username after multiple attempts.');
+};
+
 export {
 	dateFromString,
 	generateRandom6DigitKey,
@@ -558,4 +677,8 @@ export {
 	getRefreshTokenFromRequest,
 	calculateFee,
 	generateReferralCode,
+	sendOtpSms,
+	sendTransactionAlertSms,
+	validateAndFormatPhone,
+	generateUniqueUsername,
 };

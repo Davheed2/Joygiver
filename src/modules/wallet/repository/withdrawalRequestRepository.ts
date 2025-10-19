@@ -7,6 +7,7 @@ import { payoutMethodRepository } from './payoutMethodRepository';
 import { WITHDRAWAL_LIMITS } from '@/common/constants';
 import { walletRepository } from './walletRepository';
 import { paystackService } from '../services';
+import { notificationService } from '@/services/notification';
 
 class WithdrawalRequestRepository {
 	create = async (payload: Partial<IWithdrawalRequest>) => {
@@ -156,6 +157,8 @@ class WithdrawalRequestRepository {
 				description: 'Withdrawal fee',
 				metadata: { withdrawalRequestId: request.id },
 			});
+
+			await notificationService.notifyPendingTransaction(userId, 'withdrawal', amount, 'NGN');
 		});
 
 		return withdrawalRequest!;
@@ -224,6 +227,8 @@ class WithdrawalRequestRepository {
 				.decrement('pendingBalance', withdrawal.amount)
 				.increment('totalWithdrawn', withdrawal.amount)
 				.update({ updated_at: new Date() });
+
+			await notificationService.notifyWithdrawalSuccess(withdrawal.userId, withdrawal.amount, 'NGN');
 		});
 	};
 
@@ -279,6 +284,8 @@ class WithdrawalRequestRepository {
 				description: `Withdrawal failed: ${reason}`,
 				metadata: { withdrawalRequestId: withdrawal.id },
 			});
+
+			await notificationService.notifyWithdrawalFailed(withdrawal.userId, withdrawal.amount, 'NGN', reason);
 		});
 	};
 

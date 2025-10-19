@@ -81,3 +81,6 @@ staticfiles/
 static/
 local_settings.py
 .env
+
+# - Don't commit firebase-service-account.json
+**/serviceAccount.json

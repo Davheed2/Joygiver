@@ -8,6 +8,7 @@ import { wishlistRepository } from './wishlistRepository';
 import { wishlistItemRepository } from './wishlistItemRepository';
 import { paystackService } from '@/modules/wallet/services';
 import { walletRepository } from '@/modules/wallet/repository';
+import { notificationService } from '@/services/notification';
 
 class ContributorsRepository {
 	create = async (payload: Partial<IContribution>) => {
@@ -254,6 +255,13 @@ class ContributorsRepository {
 				contribution.amount,
 				paymentReference,
 				`Contribution from ${contribution.contributorName || 'Anonymous'} for ${wishlistItem.name}`
+			);
+
+			await notificationService.notifyMoneyReceived(
+				wishlist.userId,
+				contribution.amount,
+				'NGN',
+				contribution.contributorName
 			);
 
 			// Confirm balance immediately (payment verified by Paystack)

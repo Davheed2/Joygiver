@@ -8,6 +8,7 @@ export const userModuleSchema = z
 	.object({
 		firstName: nameZ.optional(),
 		lastName: nameZ.optional(),
+		username: z.string().optional(),
 		email: z
 			.string()
 			.email()

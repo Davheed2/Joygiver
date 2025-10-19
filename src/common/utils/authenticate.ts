@@ -73,6 +73,8 @@ export const authenticate = async ({
 		if (currentUser.isSuspended) throw new AppError('Your account is currently suspended', 401);
 		if (currentUser.isDeleted) throw new AppError('Your account has been deleted', 404);
 
+		await userRepository.update(currentUser.id, { lastActive: new Date() });
+
 		// check if user has changed password after the token was issued
 		// if so, invalidate the token
 		// if (

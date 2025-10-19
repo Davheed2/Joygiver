@@ -19,6 +19,19 @@ class UserRepository {
 		return await knexDb.table('users').where({ phone }).first();
 	};
 
+	findByUsername = async (username: string): Promise<IUser | null> => {
+		return await knexDb.table('users').where({ username }).first();
+	};
+
+	partialFindByUsernameOrEmail = async (usernameOrEmail: string): Promise<IUser[] | null> => {
+		const pattern = `%${usernameOrEmail}%`;
+		return await knexDb
+			.table('users')
+			.where('username', 'ilike', pattern)
+			.orWhere('email', 'ilike', pattern)
+			.orderBy('created_at', 'desc');
+	};
+
 	findByEmailOrPhone = async (email: string, phone: string): Promise<IUser | null> => {
 		return await knexDb.table('users').where({ email }).orWhere({ phone }).first();
 	};

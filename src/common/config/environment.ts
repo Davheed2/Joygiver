@@ -51,4 +51,11 @@ export const ENVIRONMENT: IEnvironment = {
 		SECRET_KEY: process.env.PAYSTACK_SECRET_KEY!,
 		PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY!,
 	},
+	TERMII: {
+		API_KEY: process.env.TERMII_API_KEY!,
+		SENDER_ID: process.env.TERMII_SENDER_ID!,
+	},
+	FIREBASE: {
+		SERVICE_ACCOUNT_KEY: process.env.FIREBASE_SERVICE_ACCOUNT_KEY!,
+	}
 };

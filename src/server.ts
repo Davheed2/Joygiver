@@ -29,10 +29,12 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
 import { startAllQueuesAndWorkers, stopAllQueuesAndWorkers } from './queues';
 import { startAllWalletCrons } from './jobs/withdrawals';
+import { startDeviceTokenCleanupCron, notifyInactiveUsersCron } from './jobs/deviceTokens';
 import { userRouter } from './modules/user/routes';
 import { wishlistRouter } from './modules/wishlist/routes';
 import { walletRouter } from './modules/wallet/routes';
 import { paystackWebhookController } from './modules/wallet/controller';
+import { notificationRouter } from './modules/notification/routes';
 
 dotenv.config();
 /**
@@ -170,6 +172,7 @@ app.use('/api/v1/alive', (req: Request, res: Response) => {
 app.use('/api/v1/user', userRouter);
 app.use('/api/v1/wishlist', wishlistRouter);
 app.use('/api/v1/wallet', walletRouter);
+app.use('/api/v1/notification', notificationRouter);
 
 // Swagger documentation
 app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -221,8 +224,11 @@ process.on('unhandledRejection', async (error: Error) => {
 
 if (process.env.NODE_ENV === 'production') {
 	startAllWalletCrons();
-	console.log('✅ Wallet cron jobs started');
+	startDeviceTokenCleanupCron();
+	// notifyInactiveUsersCron();
+	console.log('✅ cron jobs started');
 }
+notifyInactiveUsersCron();
 
 async function shutdown() {
 	console.log('Shutting down...');
