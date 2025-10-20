@@ -2,7 +2,6 @@ import * as admin from 'firebase-admin';
 import { Message, MulticastMessage } from 'firebase-admin/messaging';
 import { deviceTokenRepository } from '@/modules/notification/repository';
 import { AppError } from '@/common/utils';
-//import serviceAccount from '@/common/config/serviceAccount.json';
 import { DataPayload, NotificationPayload, SendNotificationResult, ServiceAccountJSON } from '@/common/interfaces';
 import { ENVIRONMENT } from '@/common/config';
 
@@ -12,7 +11,6 @@ const sa = serviceAccount as unknown as ServiceAccountJSON;
 const serviceAccountCred: admin.ServiceAccount = {
 	projectId: sa.project_id ?? sa.projectId,
 	clientEmail: sa.client_email ?? sa.clientEmail,
-	// Normalize escaped newlines if the private key contains "\n" sequences
 	privateKey: (sa.private_key ?? sa.privateKey)?.replace(/\\n/g, '\n'),
 };
 
@@ -24,6 +22,17 @@ admin.initializeApp({
 	credential: admin.credential.cert(serviceAccountCred),
 });
 
+// Sound configuration
+const NOTIFICATION_SOUNDS = {
+	money_received: 'money_received.wav',
+	withdrawal_success: 'money_received.wav',
+	withdrawal_failed: 'money_received.wav',
+	transaction_pending: 'money_received.wav',
+	default: 'money_received.wav', // System default sound
+} as const;
+
+type NotificationSound = keyof typeof NOTIFICATION_SOUNDS;
+
 class NotificationService {
 	private readonly messaging = admin.messaging();
 
@@ -33,10 +42,10 @@ class NotificationService {
 	async notifyUser(
 		userId: string,
 		notification: NotificationPayload,
-		data: DataPayload = {}
+		data: DataPayload = {},
+		sound?: NotificationSound
 	): Promise<SendNotificationResult> {
 		try {
-			// Get all active tokens for the user
 			const tokens = await deviceTokenRepository.getActiveTokenStrings(userId);
 
 			if (tokens.length === 0) {
@@ -49,8 +58,7 @@ class NotificationService {
 				};
 			}
 
-			// Send notification to all devices
-			return await this.sendToMultipleTokens(tokens, notification, data);
+			return await this.sendToMultipleTokens(tokens, notification, data, sound);
 		} catch (error) {
 			console.error('Error notifying user:', error);
 			throw new AppError('Failed to send notification', 500);
@@ -63,13 +71,12 @@ class NotificationService {
 	async notifyMultipleUsers(
 		userIds: string[],
 		notification: NotificationPayload,
-		data: DataPayload = {}
+		data: DataPayload = {},
+		sound?: NotificationSound
 	): Promise<SendNotificationResult> {
 		try {
-			// Get tokens for all users
 			const userTokensMap = await deviceTokenRepository.getActiveTokenStringsByUserIds(userIds);
 
-			// Flatten all tokens
 			const allTokens: string[] = [];
 			userTokensMap.forEach((tokens) => allTokens.push(...tokens));
 
@@ -83,7 +90,7 @@ class NotificationService {
 				};
 			}
 
-			return await this.sendToMultipleTokens(allTokens, notification, data);
+			return await this.sendToMultipleTokens(allTokens, notification, data, sound);
 		} catch (error) {
 			console.error('Error notifying multiple users:', error);
 			throw new AppError('Failed to send notifications', 500);
@@ -114,7 +121,8 @@ class NotificationService {
 			timestamp: new Date().toISOString(),
 		};
 
-		return await this.notifyUser(userId, notification, data);
+		// Use custom sound for money received
+		return await this.notifyUser(userId, notification, data, 'money_received');
 	}
 
 	/**
@@ -141,7 +149,7 @@ class NotificationService {
 			timestamp: new Date().toISOString(),
 		};
 
-		return await this.notifyUser(userId, notification, data);
+		return await this.notifyUser(userId, notification, data, 'withdrawal_success');
 	}
 
 	/**
@@ -168,7 +176,7 @@ class NotificationService {
 			timestamp: new Date().toISOString(),
 		};
 
-		return await this.notifyUser(userId, notification, data);
+		return await this.notifyUser(userId, notification, data, 'withdrawal_failed');
 	}
 
 	/**
@@ -193,7 +201,7 @@ class NotificationService {
 			timestamp: new Date().toISOString(),
 		};
 
-		return await this.notifyUser(userId, notification, data);
+		return await this.notifyUser(userId, notification, data, 'transaction_pending');
 	}
 
 	/**
@@ -203,9 +211,10 @@ class NotificationService {
 		userId: string,
 		title: string,
 		body: string,
-		data: DataPayload = {}
+		data: DataPayload = {},
+		sound?: NotificationSound
 	): Promise<SendNotificationResult> {
-		return await this.notifyUser(userId, { title, body }, data);
+		return await this.notifyUser(userId, { title, body }, data, sound);
 	}
 
 	/**
@@ -214,26 +223,24 @@ class NotificationService {
 	private async sendToMultipleTokens(
 		tokens: string[],
 		notification: NotificationPayload,
-		data: DataPayload = {}
+		data: DataPayload = {},
+		sound?: NotificationSound
 	): Promise<SendNotificationResult> {
 		try {
-			// FCM limits to 500 tokens per request
 			const BATCH_SIZE = 500;
 			let totalSuccess = 0;
 			let totalFailure = 0;
 			let allFailedTokens: string[] = [];
 
-			// Process in batches
 			for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
 				const batch = tokens.slice(i, i + BATCH_SIZE);
-				const result = await this.sendBatch(batch, notification, data);
+				const result = await this.sendBatch(batch, notification, data, sound);
 
 				totalSuccess += result.successCount;
 				totalFailure += result.failureCount;
 				allFailedTokens = allFailedTokens.concat(result.failedTokens);
 			}
 
-			// Deactivate failed tokens
 			if (allFailedTokens.length > 0) {
 				await deviceTokenRepository.deactivateMultiple(allFailedTokens);
 				console.log(`Deactivated ${allFailedTokens.length} invalid tokens`);
@@ -263,8 +270,12 @@ class NotificationService {
 	private async sendBatch(
 		tokens: string[],
 		notification: NotificationPayload,
-		data: DataPayload = {}
+		data: DataPayload = {},
+		sound?: NotificationSound
 	): Promise<{ successCount: number; failureCount: number; failedTokens: string[] }> {
+		// Get the sound file name
+		const soundFile = sound ? NOTIFICATION_SOUNDS[sound] : NOTIFICATION_SOUNDS.default;
+
 		const message: MulticastMessage = {
 			tokens,
 			notification: {
@@ -277,16 +288,15 @@ class NotificationService {
 				priority: 'high',
 				notification: {
 					channelId: 'default',
-					sound: 'default',
-					color: '#4F46E5', // Your brand color
-					defaultSound: true,
+					sound: soundFile, // Custom sound for Android
+					color: '#4F46E5',
 					defaultVibrateTimings: true,
 				},
 			},
 			apns: {
 				payload: {
 					aps: {
-						sound: 'default',
+						sound: soundFile, // Custom sound for iOS
 						badge: 1,
 						contentAvailable: true,
 					},
@@ -299,7 +309,6 @@ class NotificationService {
 
 		const response = await this.messaging.sendEachForMulticast(message);
 
-		// Collect failed tokens
 		const failedTokens: string[] = [];
 		response.responses.forEach((resp, idx) => {
 			if (!resp.success) {
@@ -346,7 +355,6 @@ class NotificationService {
 				}
 			});
 
-			// Deactivate failed tokens
 			if (failedTokens.length > 0) {
 				await deviceTokenRepository.deactivateMultiple(failedTokens);
 			}
@@ -406,7 +414,7 @@ class NotificationService {
 					token,
 					data: { test: 'validation' },
 				},
-				true // dry-run mode
+				true
 			);
 			return true;
 		} catch (error) {
