@@ -50,7 +50,6 @@ class ItemWithdrawalRepository {
 		return Number(result?.count || 0);
 	};
 
-	// Get total withdrawn for an item
 	getTotalWithdrawn = async (wishlistItemId: string): Promise<number> => {
 		const result = await knexDb('item_withdrawals')
 			.where({ wishlistItemId, status: 'completed' })
@@ -92,7 +91,6 @@ class ItemWithdrawalRepository {
 		if (!wallet) {
 			throw new AppError('Wallet not found', 404);
 		}
-
 
 		const reference = `ITWH-${nanoid(16)}`;
 		// Create withdrawal record and transfer funds
