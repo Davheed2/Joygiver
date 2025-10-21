@@ -1,13 +1,12 @@
-import { knexDb } from '@/common/config';
+import { ENVIRONMENT, knexDb } from '@/common/config';
 import { ContributionStatus } from '@/common/constants';
-import { IContribution, IContributorStats } from '@/common/interfaces';
+import { IContributeAllRequest, IContribution, IContributorStats } from '@/common/interfaces';
 import { AppError } from '@/common/utils';
 import { DateTime } from 'luxon';
 import { nanoid } from 'nanoid';
 import { wishlistRepository } from './wishlistRepository';
 import { wishlistItemRepository } from './wishlistItemRepository';
 import { paystackService } from '@/modules/wallet/services';
-import { walletRepository } from '@/modules/wallet/repository';
 import { notificationService } from '@/services/notification';
 
 class ContributorsRepository {
@@ -224,11 +223,18 @@ class ContributorsRepository {
 				.where({ id: wishlistItem.id })
 				.update({
 					totalContributed: newTotal,
+					pendingBalance: knexDb.raw('"pendingBalance" + ?', [contribution.amount]), // Add to pending first
 					contributorsCount: knexDb.raw('"contributorsCount" + 1'),
 					isFunded,
 					fundedAt: isFunded && !wishlistItem.fundedAt ? new Date() : wishlistItem.fundedAt,
 					updated_at: new Date(),
 				});
+
+			// After Paystack confirms (immediately in this case), move to available
+			await trx('wishlist_items')
+				.where({ id: wishlistItem.id })
+				.decrement('pendingBalance', contribution.amount)
+				.increment('availableBalance', contribution.amount);
 
 			// Update wishlist stats
 			const uniqueContributors = await trx('contributions')
@@ -250,12 +256,12 @@ class ContributorsRepository {
 				});
 
 			// Credit wallet
-			await walletRepository.creditWallet(
-				wishlist.userId,
-				contribution.amount,
-				paymentReference,
-				`Contribution from ${contribution.contributorName || 'Anonymous'} for ${wishlistItem.name}`
-			);
+			// await walletRepository.creditWallet(
+			// 	wishlist.userId,
+			// 	contribution.amount,
+			// 	paymentReference,
+			// 	`Contribution from ${contribution.contributorName || 'Anonymous'} for ${wishlistItem.name}`
+			// );
 
 			await notificationService.notifyMoneyReceived(
 				wishlist.userId,
@@ -265,7 +271,7 @@ class ContributorsRepository {
 			);
 
 			// Confirm balance immediately (payment verified by Paystack)
-			await walletRepository.confirmPendingBalance(wishlist.userId, contribution.amount, paymentReference);
+			// await walletRepository.confirmPendingBalance(wishlist.userId, contribution.amount, paymentReference);
 		});
 
 		// Send notification to wishlist owner
@@ -418,6 +424,177 @@ class ContributorsRepository {
 
 		// TODO: Initiate Paystack refund
 		console.log('Contribution refunded:', contributionId);
+	};
+
+	contributeToAll = async (data: {
+		wishlistId: string;
+		contributorName: string;
+		contributorEmail: string;
+		contributorPhone?: string;
+		totalAmount: number;
+		message?: string;
+		isAnonymous?: boolean;
+		allocationStrategy?: 'equal' | 'proportional' | 'priority';
+	}): Promise<{ contribution: IContributeAllRequest; paymentUrl: string }> => {
+		// Get wishlist
+		const wishlist = await wishlistRepository.findById(data.wishlistId);
+		if (!wishlist) {
+			throw new AppError('Wishlist not found', 404);
+		}
+
+		if (wishlist.status !== 'active') {
+			throw new AppError('This wishlist is not accepting contributions', 400);
+		}
+
+		// Get all items
+		const items = await wishlistItemRepository.findByWishlistId(data.wishlistId);
+		if (items.length === 0) {
+			throw new AppError('No items in wishlist', 400);
+		}
+
+		// Filter items that still need funding
+		const unfundedItems = items.filter((item) => item.totalContributed < item.price);
+		if (unfundedItems.length === 0) {
+			throw new AppError('All items are fully funded', 400);
+		}
+
+		// Calculate allocation based on strategy
+		let allocations: Array<{ wishlistItemId: string; amount: number }>;
+
+		switch (data.allocationStrategy) {
+			case 'equal': {
+				// Divide equally among unfunded items
+				const amountPerItem = Math.floor(data.totalAmount / unfundedItems.length);
+				allocations = unfundedItems.map((item) => ({
+					wishlistItemId: item.id,
+					amount: amountPerItem,
+				}));
+				break;
+			}
+
+			case 'proportional': {
+				// Allocate proportionally based on item price
+				const totalNeeded = unfundedItems.reduce((sum, item) => sum + (item.price - item.totalContributed), 0);
+				allocations = unfundedItems.map((item) => {
+					const needed = item.price - item.totalContributed;
+					const proportion = needed / totalNeeded;
+					return {
+						wishlistItemId: item.id,
+						amount: Math.floor(data.totalAmount * proportion),
+					};
+				});
+				break;
+			}
+
+			case 'priority':
+			default: {
+				// Fill items by priority until money runs out
+				const sortedItems = [...unfundedItems].sort((a, b) => (a.priority || 999) - (b.priority || 999));
+
+				let remaining = data.totalAmount;
+				allocations = [];
+
+				for (const item of sortedItems) {
+					if (remaining <= 0) break;
+					const needed = item.price - item.totalContributed;
+					const allocated = Math.min(needed, remaining);
+					allocations.push({
+						wishlistItemId: item.id,
+						amount: allocated,
+					});
+					remaining -= allocated;
+				}
+				break;
+			}
+		}
+
+		// Generate payment reference
+		const reference = `CONT-ALL-${nanoid(16)}`;
+
+		// Create contributions for each item
+		const contributions = await knexDb.transaction(async (trx) => {
+			const createdContributions: IContribution[] = [];
+
+			for (const allocation of allocations) {
+				if (allocation.amount <= 0) continue;
+
+				const [contribution] = await trx('contributions')
+					.insert({
+						wishlistId: wishlist.id,
+						wishlistItemId: allocation.wishlistItemId,
+						contributorName: data.contributorName,
+						contributorEmail: data.contributorEmail.toLowerCase(),
+						contributorPhone: data.contributorPhone,
+						message: data.message,
+						isAnonymous: data.isAnonymous || false,
+						amount: allocation.amount,
+						status: 'pending',
+						paymentMethod: 'paystack',
+						paymentReference: `${reference}-${allocation.wishlistItemId}`,
+					})
+					.returning('*');
+
+				createdContributions.push(contribution);
+			}
+
+			return createdContributions;
+		});
+
+		console.log(`Created ${contributions.length} contributions for "Contribute All"`);
+
+		// Initialize Paystack payment for total amount
+		const paymentData = await paystackService.initializePayment({
+			email: data.contributorEmail,
+			amount: data.totalAmount,
+			reference,
+			metadata: {
+				wishlistId: wishlist.id,
+				contributorName: data.contributorName,
+				contributionType: 'contribute_all',
+				itemCount: allocations.length,
+				allocations,
+			},
+			callbackUrl: `${ENVIRONMENT.FRONTEND_URL}/${wishlist.uniqueLink}`,
+		});
+
+		return {
+			contribution: {
+				wishlistId: wishlist.id,
+				contributorName: data.contributorName,
+				contributorEmail: data.contributorEmail,
+				reference,
+				totalAmount: data.totalAmount,
+				itemsCount: allocations.length,
+				itemAllocations: allocations,
+			},
+			paymentUrl: paymentData.authorization_url,
+		};
+	};
+
+	handleContributeAllPayment = async (reference: string): Promise<void> => {
+		// Find all contributions with this base reference
+		const contributions = await knexDb('contributions')
+			.where('paymentReference', 'like', `${reference}%`)
+			.where({ status: 'pending' });
+
+		if (contributions.length === 0) {
+			console.log('No pending contributions found for reference:', reference);
+			return;
+		}
+
+		// Process each contribution
+		for (const contribution of contributions) {
+			try {
+				await this.handleSuccessfulPayment(contribution.id, contribution.paymentReference);
+			} catch (error: unknown) {
+				console.error(
+					`Failed to process contribution ${contribution.id}:`,
+					error instanceof Error ? error.message : error
+				);
+			}
+		}
+
+		console.log(`✅ Processed ${contributions.length} contributions from "Contribute All"`);
 	};
 }
 

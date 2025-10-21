@@ -3,6 +3,7 @@ import { AppError, AppResponse, toJSON } from '@/common/utils';
 import { catchAsync } from '@/middlewares';
 import {
 	curatedItemRepository,
+	itemWithdrawalRepository,
 	wishlistItemRepository,
 	wishlistItemViewRepository,
 	wishlistRepository,
@@ -126,5 +127,70 @@ export class WishlistItemController {
 
 		return AppResponse(res, 200, toJSON(stats), 'Wishlist stats retrieved successfully');
 	});
+
+	withdrawFromItem = catchAsync(async (req: Request, res: Response) => {
+		const { user } = req;
+		const { amount, wishlistItemId } = req.body;
+
+		if (!user) {
+			throw new AppError('Please log in', 401);
+		}
+		if (!wishlistItemId) {
+			throw new AppError('Wishlist item ID is required', 400);
+		}
+		if (amount !== undefined && (isNaN(amount) || amount <= 0)) {
+			throw new AppError('Amount must be a positive number', 400);
+		}
+
+		const withdrawal = await itemWithdrawalRepository.withdrawFromItem(
+			user.id,
+			wishlistItemId,
+			amount ? Number(amount) : undefined
+		);
+
+		return AppResponse(res, 200, toJSON([withdrawal]), 'Funds withdrawn successfully');
+	});
+
+	getItemBalance = catchAsync(async (req: Request, res: Response) => {
+		const { user } = req;
+		const { wishlistItemId } = req.query;
+
+		if (!user) {
+			throw new AppError('Please log in', 401);
+		}
+		if (!wishlistItemId) {
+			throw new AppError('Wishlist Item ID is required', 400);
+		}
+
+		const balance = await itemWithdrawalRepository.getItemBalanceSummary(wishlistItemId as string);
+
+		return AppResponse(res, 200, toJSON([balance]), 'Item balance retrieved successfully');
+	});
+
+	// getItemWithdrawals = catchAsync(async (req: Request, res: Response) => {
+	// 	const { itemId } = req.params;
+
+	// 	const withdrawals = await itemWithdrawalService.getItemWithdrawals(itemId);
+
+	// 	return AppResponse(res, 200, toJSON(withdrawals), 'Withdrawal history retrieved successfully');
+	// });
+
+	// getMyItemWithdrawals = catchAsync(async (req: Request, res: Response) => {
+	// 	const { user } = req;
+	// 	const { page = 1, limit = 20 } = req.query;
+
+	// 	if (!user) {
+	// 		throw new AppError('Please log in', 401);
+	// 	}
+
+	// 	const history = await itemWithdrawalService.getUserItemWithdrawals(
+	// 		user.id,
+	// 		Number(page),
+	// 		Number(limit)
+	// 	);
+
+	// 	return AppResponse(res, 200, toJSON(history), 'Withdrawal history retrieved successfully');
+	// });
 }
+
 export const wishlistItemController = new WishlistItemController();

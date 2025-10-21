@@ -392,6 +392,142 @@ router.get('/', wishlistController.getWishlistByLink);
 router.post('/contribute-item', contributionController.initiateContribution);
 /**
  * @openapi
+ * /wishlist/contribute-all-items:
+ *   post:
+ *     summary: Contribute to all items in a wishlist
+ *     description: Initiates a single contribution that is distributed across all items in a specified wishlist based on the chosen allocation strategy (priority, equal, or proportional). Minimum contribution is ₦100. Returns a payment URL to complete the transaction via Paystack.
+ *     tags:
+ *       - Contributions
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               wishlistId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                 description: The unique identifier of the wishlist
+ *               contributorName:
+ *                 type: string
+ *                 example: "contributorName"
+ *                 description: The name of the contributor
+ *               contributorEmail:
+ *                 type: string
+ *                 format: email
+ *                 example: "1@2.com"
+ *                 description: The email address of the contributor
+ *               contributorPhone:
+ *                 type: string
+ *                 example: "08123456789"
+ *                 description: The phone number of the contributor (optional)
+ *               amount:
+ *                 type: number
+ *                 example: 500
+ *                 description: The total contribution amount (minimum ₦100)
+ *               message:
+ *                 type: string
+ *                 example: "Happy birthday!"
+ *                 description: Optional message from the contributor
+ *               isAnonymous:
+ *                 type: boolean
+ *                 example: false
+ *                 description: Indicates if the contribution should be anonymous
+ *               allocationStrategy:
+ *                 type: string
+ *                 enum: [priority, equal, proportional]
+ *                 example: "priority"
+ *                 description: Strategy to allocate the total amount across wishlist items
+ *             required:
+ *               - wishlistId
+ *               - contributorName
+ *               - contributorEmail
+ *               - amount
+ *     responses:
+ *       200:
+ *         description: Contribution initialized across all items
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       contribution:
+ *                         type: object
+ *                         properties:
+ *                           wishlistId:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                             description: The ID of the wishlist
+ *                           contributorName:
+ *                             type: string
+ *                             example: "contributorName"
+ *                             description: The name of the contributor
+ *                           contributorEmail:
+ *                             type: string
+ *                             format: email
+ *                             example: "1@2.com"
+ *                             description: The email of the contributor
+ *                           reference:
+ *                             type: string
+ *                             example: "CONT-ALL-bmiH4JWd1ebq3uS5"
+ *                             description: Unique reference for the bulk contribution
+ *                           totalAmount:
+ *                             type: number
+ *                             example: 500
+ *                             description: The total amount being contributed
+ *                           itemsCount:
+ *                             type: integer
+ *                             example: 9
+ *                             description: Number of wishlist items receiving allocation
+ *                           itemAllocations:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 wishlistItemId:
+ *                                   type: string
+ *                                   format: uuid
+ *                                   example: "30209555-95f3-4701-a645-48d49d802721"
+ *                                   description: The ID of the wishlist item
+ *                                 amount:
+ *                                   type: number
+ *                                   example: 59.99
+ *                                   description: The amount allocated to this item
+ *                       paymentUrl:
+ *                         type: string
+ *                         example: "https://checkout.paystack.com/lp1q68frfwb7fz8"
+ *                         description: Paystack payment URL to complete the transaction
+ *                 message:
+ *                   type: string
+ *                   example: "Contributing ₦500 to 9 items"
+ *       400:
+ *         description: Bad Request - Missing fields or amount below minimum
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Minimum contribution amount is ₦100"
+ */
+router.post('/contribute-all-items', contributionController.contributeToAll);
+/**
+ * @openapi
  * /wishlist/contributions:
  *   get:
  *     summary: Retrieve contributions for a wishlist
@@ -2480,6 +2616,171 @@ router.get('/user', wishlistController.getUserWishlist);
 router.get('/stats', wishlistController.getWishlistStats);
 /**
  * @openapi
+ * /wishlist/withdraw-all-funds:
+ *   post:
+ *     summary: Withdraw all available funds from a wishlist
+ *     description: Withdraws all available balances from every withdrawable item in the specified wishlist that has funds. Requires user authentication and ownership of the wishlist. Returns total amount withdrawn, number of items processed, and details of each withdrawal.
+ *     tags:
+ *       - Wishlist
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               wishlistId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                 description: The unique identifier of the wishlist to withdraw from
+ *             required:
+ *               - wishlistId
+ *     responses:
+ *       200:
+ *         description: Funds withdrawn successfully from all eligible items
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       totalWithdrawn:
+ *                         type: number
+ *                         example: 124.99
+ *                         description: Total amount withdrawn across all items
+ *                       itemsWithdrawn:
+ *                         type: integer
+ *                         example: 2
+ *                         description: Number of wishlist items from which funds were withdrawn
+ *                       withdrawals:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                               format: uuid
+ *                               example: "b28bc82f-e57a-4aad-94e6-c353cb94fe77"
+ *                               description: The unique identifier of the withdrawal record
+ *                             wishlistItemId:
+ *                               type: string
+ *                               format: uuid
+ *                               example: "f423e5a5-1d07-4dbd-a3f1-a787d96cb25c"
+ *                               description: The ID of the wishlist item
+ *                             wishlistId:
+ *                               type: string
+ *                               format: uuid
+ *                               example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                               description: The ID of the wishlist
+ *                             userId:
+ *                               type: string
+ *                               format: uuid
+ *                               example: "09127216-c1a9-468e-9a96-d712ab67edd9"
+ *                               description: The ID of the user who owns the wishlist
+ *                             walletId:
+ *                               type: string
+ *                               format: uuid
+ *                               example: "f8a12d2f-7e7b-484c-b0e4-d2839c459027"
+ *                               description: The ID of the wallet receiving the funds
+ *                             amount:
+ *                               type: string
+ *                               example: "35.00"
+ *                               description: The amount withdrawn from this item
+ *                             status:
+ *                               type: string
+ *                               example: "completed"
+ *                               description: The status of the withdrawal
+ *                             reference:
+ *                               type: string
+ *                               example: "ITWH-aXjbQDKqabrpBmhe"
+ *                               description: Unique reference for the withdrawal
+ *                             note:
+ *                               type: string
+ *                               nullable: true
+ *                               example: null
+ *                               description: Optional note (not used)
+ *                             processedAt:
+ *                               type: string
+ *                               format: date-time
+ *                               example: "2025-10-21T07:46:30.406Z"
+ *                               description: Timestamp when withdrawal was processed
+ *                             created_at:
+ *                               type: string
+ *                               format: date-time
+ *                               example: "2025-10-21T07:46:30.381Z"
+ *                               description: Timestamp when record was created
+ *                             updated_at:
+ *                               type: string
+ *                               format: date-time
+ *                               example: "2025-10-21T07:46:30.381Z"
+ *                               description: Timestamp when record was last updated
+ *                 message:
+ *                   type: string
+ *                   example: "Withdrawn ₦124.99 from 2 items"
+ *       400:
+ *         description: Bad Request - Missing wishlist ID or no funds available
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "No funds available to withdraw"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ *       403:
+ *         description: Forbidden - User does not own the wishlist
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: Not Found - Wishlist not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist not found"
+ */
+router.post('/withdraw-all-funds', wishlistController.withdrawAllFromWishlist);
+/**
+ * @openapi
  * /wishlist/item:
  *   get:
  *     summary: Retrieve a wishlist item by unique link
@@ -2727,6 +3028,260 @@ router.get('/item', wishlistItemController.getItemByLink);
  *                   example: "Wishlist item not found"
  */
 router.get('/item-stats', wishlistItemController.getWishlistItemStats);
+/**
+ * @openapi
+ * /wishlist/item-withdraw:
+ *   post:
+ *     summary: Withdraw funds from a wishlist item
+ *     description: Allows the wishlist owner to withdraw available funds from a specific wishlist item to their wallet. If no amount is specified, withdraws the full available balance. Minimum withdrawal is ₦100. Requires user authentication and ownership of the wishlist.
+ *     tags:
+ *       - Wishlist
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               wishlistItemId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *                 description: The unique identifier of the wishlist item to withdraw from
+ *               amount:
+ *                 type: number
+ *                 example: 150
+ *                 description: The amount to withdraw (optional). If omitted, withdraws full available balance. Must be at least ₦100.
+ *             required:
+ *               - wishlistItemId
+ *     responses:
+ *       200:
+ *         description: Funds withdrawn successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "08893e68-b7dd-4134-a027-0e2605425b2b"
+ *                         description: The unique identifier of the withdrawal record
+ *                       wishlistItemId:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *                         description: The ID of the wishlist item
+ *                       wishlistId:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "e9988d8b-d9c6-4dc8-aaf1-5d8e284eeae6"
+ *                         description: The ID of the parent wishlist
+ *                       userId:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "09127216-c1a9-468e-9a96-d712ab67edd9"
+ *                         description: The ID of the user who owns the wishlist
+ *                       walletId:
+ *                         type: string
+ *                         format: uuid
+ *                         example: "f8a12d2f-7e7b-484c-b0e4-d2839c459027"
+ *                         description: The ID of the user's wallet receiving the funds
+ *                       amount:
+ *                         type: string
+ *                         example: "150.00"
+ *                         description: The amount withdrawn
+ *                       status:
+ *                         type: string
+ *                         example: "completed"
+ *                         description: The status of the withdrawal (completed immediately)
+ *                       reference:
+ *                         type: string
+ *                         example: "ITWH-uwYvU5kh7IBLFwe3"
+ *                         description: Unique reference for the withdrawal transaction
+ *                       note:
+ *                         type: string
+ *                         nullable: true
+ *                         example: null
+ *                         description: Optional note (not used in current implementation)
+ *                       processedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-21T06:30:25.025Z"
+ *                         description: Timestamp when the withdrawal was processed
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-21T06:30:25.015Z"
+ *                         description: Timestamp when the withdrawal record was created
+ *                 message:
+ *                   type: string
+ *                   example: "Funds withdrawn successfully"
+ *       400:
+ *         description: Bad Request - Invalid amount, insufficient balance, or item not withdrawable
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Minimum withdrawal amount is ₦100"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ *       403:
+ *         description: Forbidden - User does not own the wishlist
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized - you do not own this wishlist"
+ *       404:
+ *         description: Not Found - Wishlist item, wishlist, or wallet not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist item not found"
+ */
+router.post('/item-withdraw', wishlistItemController.withdrawFromItem);
+/**
+ * @openapi
+ * /wishlist//item-balance:
+ *   get:
+ *     summary: Retrieve balance summary for a wishlist item
+ *     description: Fetches the current balance summary of a specific wishlist item, including total contributed, available, pending, withdrawn amounts, and withdrawal eligibility. Requires user authentication.
+ *     tags:
+ *       - Wishlist
+ *     parameters:
+ *       - in: query
+ *         name: wishlistItemId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "220031d9-b808-4f5a-a811-8c5a6271ecc7"
+ *         required: true
+ *         description: The unique identifier of the wishlist item
+ *     responses:
+ *       200:
+ *         description: Item balance retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       totalContributed:
+ *                         type: string
+ *                         example: "300.00"
+ *                         description: Total amount contributed to the item
+ *                       availableBalance:
+ *                         type: string
+ *                         example: "0.00"
+ *                         description: Amount currently available for withdrawal
+ *                       pendingBalance:
+ *                         type: string
+ *                         example: "0.00"
+ *                         description: Amount in pending state (not yet withdrawable)
+ *                       withdrawnAmount:
+ *                         type: string
+ *                         example: "300.00"
+ *                         description: Total amount already withdrawn from the item
+ *                       isWithdrawable:
+ *                         type: boolean
+ *                         example: true
+ *                         description: Whether the item allows withdrawals
+ *                       lastWithdrawal:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                         example: "2025-10-21T06:30:25.017Z"
+ *                         description: Timestamp of the last withdrawal (null if none)
+ *                 message:
+ *                   type: string
+ *                   example: "Item balance retrieved successfully"
+ *       400:
+ *         description: Bad Request - Missing wishlist item ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist Item ID is required"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Please log in"
+ *       404:
+ *         description: Not Found - Wishlist item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: "Wishlist item not found"
+ */
+router.get('/item-balance', wishlistItemController.getItemBalance);
 /**
  * @openapi
  * /wishlist/reply-contributor:

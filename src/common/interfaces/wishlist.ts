@@ -32,6 +32,11 @@ export interface IWishlistItem {
 	totalContributed: number;
 	uniqueLink: string;
 	contributorsCount: number;
+	availableBalance: number; // NEW - Ready to withdraw
+	pendingBalance: number; // NEW - Payment processing
+	withdrawnAmount: number; // NEW - Already withdrawn
+	isWithdrawable: boolean; // NEW - Can owner withdraw?
+	lastWithdrawal?: Date; // NEW - Timestamp of last withdrawal
 	isFunded: boolean;
 	fundedAt?: Date;
 	viewsCount: number;
@@ -155,4 +160,35 @@ export interface IFriendWishlist {
 		}>;
 		uniqueLink: string;
 	};
+}
+
+export interface IItemWithdrawal {
+	id: string;
+	wishlistItemId: string;
+	wishlistId: string;
+	userId: string;
+	walletId: string;
+	amount: number;
+	status: 'pending' | 'completed' | 'failed';
+	reference: string;
+	note?: string;
+	processedAt?: Date;
+	created_at: Date;
+	updated_at: Date;
+}
+
+export interface IContributeAllRequest {
+	wishlistId: string;
+	contributorName: string;
+	contributorEmail: string;
+	contributorPhone?: string;
+	totalAmount: number;
+	message?: string;
+	reference?: string;
+	itemsCount: number;
+	isAnonymous?: boolean;
+	itemAllocations: Array<{
+		wishlistItemId: string;
+		amount: number;
+	}>;
 }

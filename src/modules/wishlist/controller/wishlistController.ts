@@ -8,6 +8,7 @@ import { knexDb } from '@/common/config';
 import {
 	categoryRepository,
 	curatedItemRepository,
+	itemWithdrawalRepository,
 	wishlistItemRepository,
 	wishlistRepository,
 	wishlistViewRepository,
@@ -204,6 +205,27 @@ export class WishlistController {
 		const stats = await wishlistRepository.getWishlistStats(wishlistId as string);
 
 		return AppResponse(res, 200, toJSON(stats), 'Wishlist stats retrieved successfully');
+	});
+
+	withdrawAllFromWishlist = catchAsync(async (req: Request, res: Response) => {
+		const { user } = req;
+		const { wishlistId } = req.body;
+
+		if (!user) {
+			throw new AppError('Please log in', 401);
+		}
+		if (!wishlistId) {
+			throw new AppError('Wishlist ID is required', 400);
+		}
+
+		const result = await itemWithdrawalRepository.withdrawAllFromWishlist(user.id, wishlistId);
+
+		return AppResponse(
+			res,
+			200,
+			toJSON([result]),
+			`Withdrawn ₦${result.totalWithdrawn.toLocaleString()} from ${result.itemsWithdrawn} items`
+		);
 	});
 
 	seedData = catchAsync(async (req: Request, res: Response) => {

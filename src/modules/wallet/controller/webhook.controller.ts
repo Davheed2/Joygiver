@@ -159,11 +159,14 @@ export class PaystackWebhookController {
 					return;
 				}
 
-				// Process the contribution and credit wallet
+				// Process the contribution and credit wishlist item
 				await contributionRepository.handleSuccessfulPayment(contribution.id, reference);
-				console.log('✅ Contribution processed and wallet credited:', contribution.id);
+				console.log('✅ Contribution processed and wishlist item credited:', contribution.id);
+			} else if (!contribution) {
+				await contributionRepository.handleContributeAllPayment(reference);
+				console.log('✅ Contribute-all payment processed successfully:', reference);
 			} else {
-				console.log('ℹ️ No contribution found for reference:', reference);
+				console.log('ℹ️ No matching contribution found for reference:', reference);
 				// Could be other payment types in the future
 			}
 		} catch (err: unknown) {

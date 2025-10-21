@@ -30,6 +30,45 @@ export class ContributionController {
 		return AppResponse(res, 200, toJSON([result]), 'Contribution initialized successfully. Please complete payment');
 	});
 
+	contributeToAll = catchAsync(async (req: Request, res: Response) => {
+		const {
+			wishlistId,
+			contributorName,
+			contributorEmail,
+			contributorPhone,
+			amount,
+			message,
+			isAnonymous,
+			allocationStrategy = 'priority', // equal, proportional, priority
+		} = req.body;
+
+		if (!wishlistId || !contributorName || !contributorEmail || !amount) {
+			throw new AppError('Missing required fields', 400);
+		}
+
+		if (amount < 100) {
+			throw new AppError('Minimum contribution amount is ₦100', 400);
+		}
+
+		const result = await contributionRepository.contributeToAll({
+			wishlistId,
+			contributorName,
+			contributorEmail,
+			contributorPhone,
+			totalAmount: Number(amount),
+			message,
+			isAnonymous: isAnonymous || false,
+			allocationStrategy,
+		});
+
+		return AppResponse(
+			res,
+			200,
+			toJSON([result]),
+			`Contributing ₦${amount.toLocaleString()} to ${result.contribution.itemsCount} items`
+		);
+	});
+
 	getWishlistContributions = catchAsync(async (req: Request, res: Response) => {
 		const { page = 1, limit = 20, wishlistId } = req.query;
 
