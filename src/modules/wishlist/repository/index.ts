@@ -5,4 +5,4 @@ export * from './wishlistViewRepository';
 export * from './wishlistItemRepository';
 export * from './curatedItemRepository';
 export * from './wishlistItemViewRepository';
-export * from './ItemWithdrawalRepository';
+export * from './wishlistItemWithdrawalRepository';
