@@ -22,6 +22,7 @@ import { friendsRepository, userRepository } from '@/modules/user/repository';
 import { ENVIRONMENT } from '@/common/config';
 import { IUser } from '@/common/interfaces';
 import { DateTime } from 'luxon';
+import { walletRepository } from '@/modules/wallet/repository';
 
 export class UserController {
 	signUp = catchAsync(async (req: Request, res: Response) => {
@@ -108,6 +109,14 @@ export class UserController {
 			otp: generatedOtp,
 			otpExpires,
 			otpRetries: (user.otpRetries || 0) + 1,
+		});
+
+		await walletRepository.create({
+			userId: user.id,
+			availableBalance: 0,
+			pendingBalance: 0,
+			totalReceived: 0,
+			totalWithdrawn: 0,
 		});
 
 		if (email && user.email) {
