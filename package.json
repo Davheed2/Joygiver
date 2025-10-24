@@ -58,6 +58,7 @@
 		"npm": "^11.1.0",
 		"otp-generator": "^4.0.1",
 		"pg": "^8.14.1",
+		"resend": "^6.2.2",
 		"sharp": "^0.33.5",
 		"slugify": "^1.6.6",
 		"swagger-jsdoc": "^6.2.8",

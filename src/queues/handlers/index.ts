@@ -7,17 +7,11 @@ import {
 	LoginEmailData,
 } from '@/common/interfaces';
 import { logger } from '@/common/utils';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { ENVIRONMENT } from 'src/common/config';
 import { forgotPasswordEmail, loginEmail, otpEmail, resetPasswordEmail, welcomeEmail } from '../templates';
 
-const transporter = nodemailer.createTransport({
-	service: 'gmail',
-	auth: {
-		user: ENVIRONMENT.EMAIL.GMAIL_USER,
-		pass: ENVIRONMENT.EMAIL.GMAIL_PASSWORD,
-	},
-});
+const resend = new Resend(ENVIRONMENT.EMAIL.RESEND_API_KEY);
 
 export const sendEmail = async (job: EmailJobData) => {
 	const { data, type } = job as EmailJobData;
@@ -51,16 +45,15 @@ export const sendEmail = async (job: EmailJobData) => {
 			throw new Error(`No template found for email type: ${type}`);
 	}
 
-	const mailOptions = {
-		from: `"MILLENIA" <${ENVIRONMENT.EMAIL.GMAIL_USER}>`,
-		to: data.to,
-		subject: subject,
-		html: htmlContent,
-	};
-
 	try {
-		const dispatch = await transporter.sendMail(mailOptions);
-		console.log(dispatch);
+		const result = await resend.emails.send({
+			from: 'JOYGIVER <updates@joygiver.co>',
+			to: data.to,
+			subject: subject,
+			html: htmlContent,
+		});
+
+		console.log(result);
 		logger.info(`Email successfully sent to ${data.to}`);
 	} catch (error) {
 		console.error(error);
