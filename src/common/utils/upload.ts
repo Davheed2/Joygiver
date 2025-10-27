@@ -66,6 +66,12 @@ export const uploadPictureFile = async (payload: IAwsUploadFile): Promise<{ secu
 		throw new AppError('Photo size exceeds 8MB limit', 400);
 	}
 
+	console.log('fileName', fileName);
+	console.log('mimetype', mimetype);
+	console.log('bufferSize', buffer.length);
+	console.log('file valid chaeck', !isValidPhotoNameAwsUpload(fileName));
+
+
 	if (fileName && !isValidPhotoNameAwsUpload(fileName)) {
 		throw new AppError('Invalid file name', 400);
 	}
