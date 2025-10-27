@@ -42,8 +42,6 @@ export class CuratedItemController {
 			throw new AppError('Category not found', 404);
 		}
 
-		console.log('imageFile', imageFile)
-
 		let finalImageUrl: string | undefined = undefined;
 		if (imageFile) {
 			const { secureUrl } = await uploadPictureFile({
