@@ -16,9 +16,6 @@ export class CuratedItemController {
 		if (!user) {
 			throw new AppError('Please log in to create a curated item', 401);
 		}
-		if (user.role !== 'admin') {
-			throw new AppError('Only admins can create curated items', 403);
-		}
 		if (!name || !price || !categoryId || !gender) {
 			throw new AppError('Name, price, category, and gender are required', 400);
 		}
