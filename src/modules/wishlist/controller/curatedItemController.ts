@@ -39,6 +39,10 @@ export class CuratedItemController {
 			throw new AppError('Category not found', 404);
 		}
 
+		const isAdmin = user.role === 'admin';
+		const itemType = isAdmin ? 'global' : 'custom';
+		const isPublic = isAdmin;
+
 		let finalImageUrl: string | undefined = undefined;
 		if (imageFile) {
 			const { secureUrl } = await uploadPictureFile({
@@ -60,6 +64,9 @@ export class CuratedItemController {
 			gender: mappedGender,
 			popularity: 0,
 			isActive: true,
+			createdBy: user.id, 
+			itemType, 
+			isPublic,
 		});
 
 		if (!curatedItem) {
@@ -249,6 +256,12 @@ export class CuratedItemController {
 		const existingItem = await curatedItemRepository.findById(curatedItemId);
 		if (!existingItem) {
 			throw new AppError('Curated item not found', 404);
+		}
+
+		// Don't allow deleting if item is used in wishlist items
+		const usageCount = await curatedItemRepository.countUsage(curatedItemId);
+		if (usageCount > 0) {
+			throw new AppError('Cannot delete item that is being used in wishlists', 400);
 		}
 
 		const deletedCount = await curatedItemRepository.delete(curatedItemId);

@@ -44,7 +44,7 @@ class CuratedItemRepository {
 		page: number = 1,
 		limit: number = 20
 	): Promise<PaginatedResult> => {
-		let query = knexDb.table('curated_items').where('gender', gender).where('isActive', true);
+		let query = knexDb.table('curated_items').where('gender', gender).where('isActive', true).where('isPublic', true);
 
 		// Only apply category filter if categoryIds is provided
 		if (categoryIds && categoryIds.length > 0) {
@@ -82,7 +82,8 @@ class CuratedItemRepository {
 		let query = knexDb
 			.table('curated_items')
 			.whereIn('gender', [Gender.MALE, Gender.FEMALE, Gender.PREFER_NOT_TO_SAY])
-			.where('isActive', true);
+			.where('isActive', true)
+			.where('isPublic', true);
 
 		// Only apply category filter if categoryIds is provided
 		if (categoryIds && categoryIds.length > 0) {
@@ -128,6 +129,15 @@ class CuratedItemRepository {
 
 	delete = async (id: string): Promise<number> => {
 		return await knexDb('curated_items').where({ id }).del();
+	};
+
+	countUsage = async (curatedItemId: string): Promise<number> => {
+		const result = await knexDb('wishlist_items').where({ curatedItemId }).count('* as count').first();
+		return Number(result?.count || 0);
+	};
+
+	findByCreator = async (userId: string) => {
+		return await knexDb('curated_items').where({ createdBy: userId, isActive: true }).orderBy('created_at', 'desc');
 	};
 }
 

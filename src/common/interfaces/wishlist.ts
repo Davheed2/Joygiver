@@ -54,6 +54,9 @@ export interface ICuratedItem {
 	categoryId: string;
 	gender: Gender;
 	popularity: number;
+	createdBy?: string; 
+	itemType: 'global' | 'custom';
+	isPublic: boolean;
 	isActive: boolean;
 	created_at?: Date;
 	updated_at?: Date;
