@@ -73,7 +73,13 @@ export const authenticate = async ({
 		if (currentUser.isSuspended) throw new AppError('Your account is currently suspended', 401);
 		if (currentUser.isDeleted) throw new AppError('Your account has been deleted', 404);
 
-		await userRepository.update(currentUser.id, { lastActive: new Date() });
+		try {
+			const test = await userRepository.update(currentUser.id, { lastActive: new Date() });
+			console.log('✅ Updated lastActive for user:', test);
+		} catch (updateError) {
+			console.error('❌ Error updating lastActive:', updateError);
+			// Don't throw - continue with authentication even if update fails
+		}
 
 		// check if user has changed password after the token was issued
 		// if so, invalidate the token
@@ -215,6 +221,14 @@ export const authenticate = async ({
 		if (!currentUser) throw new AppError('User not found', 404);
 		if (currentUser.isSuspended) throw new AppError('Your account is currently suspended', 401);
 		if (currentUser.isDeleted) throw new AppError('Your account has been deleted', 404);
+
+		try {
+			const test = await userRepository.update(currentUser.id, { lastActive: new Date() });
+			console.log('✅ Updated lastActive for user:', test);
+		} catch (updateError) {
+			console.error('❌ Error updating lastActive:', updateError);
+			// Don't throw - continue with authentication even if update fails
+		}
 
 		const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await generateTokenPair(
 			currentUser.id,
